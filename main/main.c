@@ -30,29 +30,36 @@ SPDX-License-Identifier: MIT
 
 /* === Macros definitions =========================================================================================== */
 
-#define DIGITO_ANCHO     60
-#define DIGITO_ALTO      100
+#define DIGITO_ANCHO 60
+#define DIGITO_ALTO 100
 #define DIGITO_ENCENDIDO ILI9341_RED
-#define DIGITO_APAGADO   0x3800
-#define DIGITO_FONDO     ILI9341_BLACK
+#define DIGITO_APAGADO 0x3800
+#define DIGITO_FONDO ILI9341_BLACK
 
-#define LED_ROJO         GPIO_NUM_26 
-#define LED_VERDE        GPIO_NUM_27 
+#define LED_ROJO GPIO_NUM_26
+#define LED_VERDE GPIO_NUM_27
 
-#define BOTON1           GPIO_NUM_13
-#define BOTON2           GPIO_NUM_32
-#define BOTON3           GPIO_NUM_14
+#define BOTON1 GPIO_NUM_13
+#define BOTON2 GPIO_NUM_32
+#define BOTON3 GPIO_NUM_14
 
 /* === Private data type declarations =============================================================================== */
 
-typedef struct blink {
+typedef struct blink
+{
     gpio_num_t led;
     uint16_t tiempo;
-} * blink_t;
+} *blink_t;
 
-typedef enum { UNIDAD = 0, DECENA = 1, CENTENA = 2 } digito_t;
+typedef enum
+{
+    UNIDAD = 0,
+    DECENA = 1,
+    CENTENA = 2
+} digito_t;
 
-typedef enum {
+typedef enum
+{
     OFF = 0,
     ON = 1,
 } state_t;
@@ -64,6 +71,8 @@ static const struct blink parametros[] = {
     {.led = LED_ROJO, .tiempo = 100},
 };
 
+static const char *TAG = "app_main";
+static const char *B2 = "boton_2";
 
 /* === Public variable definitions ================================================================================== */
 
@@ -81,29 +90,36 @@ SemaphoreHandle_t cuenta_mutex;
 /* === Private function implementation ============================================================================== */
 
 // solo llamar con el mutex de cuenta tomado
-void volver_a_cero(void) {
+void volver_a_cero(void)
+{
 
     unidad = 0;
     decena = 0;
     centena = 0;
     // tomar el mutex de decima
-    if (xSemaphoreTake(decima_mutex, portMAX_DELAY) == pdTRUE) {
+    if (xSemaphoreTake(decima_mutex, portMAX_DELAY) == pdTRUE)
+    {
         decima = 0;
         xSemaphoreGive(decima_mutex);
     }
     // soltar el mutex de decima
 }
 
-void incrementar_segundo(digito_t digito_inicial) {
-    if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE) {
+void incrementar_segundo(digito_t digito_inicial)
+{
+    if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
+    {
         digito_t digito_actual = digito_inicial;
         bool carry = true;
-        while (carry) {
+        while (carry)
+        {
             carry = false;
-            switch (digito_actual) {
+            switch (digito_actual)
+            {
             case UNIDAD:
                 unidad++;
-                if (unidad > 9) {
+                if (unidad > 9)
+                {
                     unidad = 0;
                     carry = true;
                     digito_actual = DECENA;
@@ -111,7 +127,8 @@ void incrementar_segundo(digito_t digito_inicial) {
                 break;
             case DECENA:
                 decena++;
-                if (decena > 9) {
+                if (decena > 9)
+                {
                     decena = 0;
                     carry = true;
                     digito_actual = CENTENA;
@@ -119,7 +136,8 @@ void incrementar_segundo(digito_t digito_inicial) {
                 break;
             case CENTENA:
                 centena++;
-                if (centena > 9) {
+                if (centena > 9)
+                {
                     volver_a_cero();
                     carry = false;
                 }
@@ -128,11 +146,13 @@ void incrementar_segundo(digito_t digito_inicial) {
                 break;
             }
 
-            if (!carry) {
+            if (!carry)
+            {
                 break;
             }
 
-            if (digito_actual > CENTENA) {
+            if (digito_actual > CENTENA)
+            {
                 break;
             }
         }
@@ -141,54 +161,72 @@ void incrementar_segundo(digito_t digito_inicial) {
 }
 /* === Public function implementation =============================================================================== */
 
-void contar_decima(void * args) {
+void contar_decima(void *args)
+{
     TickType_t lastEvent;
     lastEvent = xTaskGetTickCount();
-    while (1) {
+    while (1)
+    {
         vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(100));
         // tomar el mutex de decima
-        if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE) {
-            if (cuenta == ON) {
-                if (xSemaphoreTake(decima_mutex, portMAX_DELAY) == pdTRUE) {
+        if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
+        {
+            if (cuenta == ON)
+            {
+                if (xSemaphoreTake(decima_mutex, portMAX_DELAY) == pdTRUE)
+                {
                     decima = decima + 1;
-                    if (decima == 9) {
+                    if (decima == 9)
+                    {
                         decima = 0;
                         // soltar el mutex
                         xSemaphoreGive(decima_mutex);
                         xSemaphoreGive(cuenta_mutex);
                         incrementar_segundo(UNIDAD);
-                    } else {
+                    }
+                    else
+                    {
                         xSemaphoreGive(decima_mutex);
                     }
-                } else {
+                }
+                else
+                {
                     // ESP_LOGI("CONTAR", "falle en tomar el lock decima\n");
                 }
             } // cuenta =OFF
             xSemaphoreGive(cuenta_mutex);
-        } else {
+        }
+        else
+        {
 
             //  ESP_LOGI("CONTAR", "falle en tomar el lock\n");
         }
         //   ESP_LOGI("CONTAR", "Decima: %d", decima);
     }
 }
-void blinking(void * args) {
+void blinking(void *args)
+{
     blink_t parametros = (blink_t)args;
     TickType_t lastEvent;
     gpio_set_direction(parametros->led, GPIO_MODE_OUTPUT);
     gpio_set_level(parametros->led, 0);
     lastEvent = xTaskGetTickCount();
 
-    while (1) {
+    while (1)
+    {
 
-        if (xSemaphoreTake(luz_verde_roja_mutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-            if (luz_verde == ON) {
+        if (xSemaphoreTake(luz_verde_roja_mutex, pdMS_TO_TICKS(50)) == pdTRUE)
+        {
+            if (luz_verde == ON)
+            {
                 gpio_set_level(parametros->led, 1);
                 vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(parametros->tiempo));
                 gpio_set_level(parametros->led, 0);
                 xSemaphoreGive(luz_verde_roja_mutex);
                 vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(parametros->tiempo));
-            } else {
+            }
+            else
+            {
 
                 gpio_set_level(parametros->led, 0); // Ensure LED is off when not blinking
                 xSemaphoreGive(luz_verde_roja_mutex);
@@ -198,14 +236,17 @@ void blinking(void * args) {
     }
 }
 
-void red(void * args) {
+void red(void *args)
+{
     blink_t parametros = (blink_t)args;
 
     gpio_set_direction(LED_ROJO, GPIO_MODE_OUTPUT);
     gpio_set_level(parametros->led, 1);
-    while (1) {
+    while (1)
+    {
         // tomar lock luz verde roja
-        if (xSemaphoreTake(luz_verde_roja_mutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+        if (xSemaphoreTake(luz_verde_roja_mutex, pdMS_TO_TICKS(50)) == pdTRUE)
+        {
             if (luz_verde == ON)
 
                 gpio_set_level(parametros->led, 0);
@@ -218,7 +259,8 @@ void red(void * args) {
     }
 }
 
-void dibujar_pantalla(void * args) {
+void dibujar_pantalla(void *args)
+{
     ILI9341Init();
     ILI9341Rotate(ILI9341_Landscape_1);
 
@@ -238,14 +280,16 @@ void dibujar_pantalla(void * args) {
     DibujarDigito(segundos, 0, 0);
     DibujarDigito(decimas, 0, 0);
 
-    while (1) {
+    while (1)
+    {
         // tomar lock de cuenta
-        if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE) {
+        if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
+        {
             unidad_act = unidad;
             decena_act = decena;
             centena_act = centena;
             xSemaphoreGive(cuenta_mutex);
-        }//soltar lock
+        } // soltar lock
         if (unidad_act != unidad_ant)
             DibujarDigito(segundos, 2, unidad_act);
         if (decena_act != decena_ant)
@@ -257,7 +301,8 @@ void dibujar_pantalla(void * args) {
         centena_ant = centena_act;
 
         ILI9341DrawFilledCircle(220, 150, 5, DIGITO_ENCENDIDO);
-        if (xSemaphoreTake(decima_mutex, portMAX_DELAY) == pdTRUE) {
+        if (xSemaphoreTake(decima_mutex, portMAX_DELAY) == pdTRUE)
+        {
             decima_act = decima;
             xSemaphoreGive(decima_mutex);
         }
@@ -268,29 +313,39 @@ void dibujar_pantalla(void * args) {
     }
 }
 
-void leer_boton1(void * args) {
+void leer_boton1(void *args)
+{
     gpio_set_direction(BOTON1, GPIO_MODE_INPUT);
     gpio_pullup_en(BOTON1);
     int level;
     level = gpio_get_level(BOTON1);
 
-    while (1) {
-        while (level == 1) {
+    while (1)
+    {
+        while (level == 1)
+        {
             level = gpio_get_level(BOTON1);
             vTaskDelay(pdMS_TO_TICKS(100));
         }
-        if (level == 0) { 
-            // ESP_LOGI("BOTON1", "presionado");
-            if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE) {
-                if (cuenta == ON) {
+        if (level == 0)
+        {
+            // ESP_LOGI("B1", "presionado");
+            if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
+            {
+                if (cuenta == ON)
+                {
                     cuenta = OFF;
-                    if (xSemaphoreTake(luz_verde_roja_mutex, portMAX_DELAY) == pdTRUE) {
+                    if (xSemaphoreTake(luz_verde_roja_mutex, portMAX_DELAY) == pdTRUE)
+                    {
                         luz_verde = OFF;
                         xSemaphoreGive(luz_verde_roja_mutex);
                     }
-                } else {
+                }
+                else
+                {
                     cuenta = ON;
-                    if (xSemaphoreTake(luz_verde_roja_mutex, portMAX_DELAY) == pdTRUE) {
+                    if (xSemaphoreTake(luz_verde_roja_mutex, portMAX_DELAY) == pdTRUE)
+                    {
                         luz_verde = ON;
                         xSemaphoreGive(luz_verde_roja_mutex);
                     }
@@ -300,58 +355,97 @@ void leer_boton1(void * args) {
 
             vTaskDelay(pdMS_TO_TICKS(20));
         }
-        while (level == 0) {
+        while (level == 0)
+        {
             level = gpio_get_level(BOTON1);
             vTaskDelay(pdMS_TO_TICKS(100));
         }
-        // ESP_LOGI("BOTON1", "no presionado");
+        // ESP_LOGI("B1", "no presionado");
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
-void leer_boton2(void * args) {
+void leer_boton2(void *args)
+{
     gpio_set_direction(BOTON2, GPIO_MODE_INPUT);
     gpio_pullup_en(BOTON2);
     int level;
     level = gpio_get_level(BOTON2);
-    
-    while (1) {
-        while (level == 1) {
+
+    while (1)
+    {
+        while (level == 1)
+        {
             level = gpio_get_level(BOTON2);
             vTaskDelay(pdMS_TO_TICKS(100));
         }
-        if (level == 0) {
-            if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE) {
-                if (cuenta == OFF) {
+        if (level == 0)
+        {
+            if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
+            {
+                if (cuenta == OFF)
+                {
                     volver_a_cero();
                 }
                 xSemaphoreGive(cuenta_mutex);
-                ESP_LOGI("BOTON2", "presionado");
+                ESP_LOGI("B2", "presionado");
             }
             vTaskDelay(pdMS_TO_TICKS(50));
         }
-        while (level == 0) {
+        while (level == 0)
+        {
             level = gpio_get_level(BOTON2);
             vTaskDelay(pdMS_TO_TICKS(100));
         }
-        ESP_LOGI("BOTON2", "solto");
+        ESP_LOGI("B2", "solto");
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
-void app_main(void) {
+void app_main(void)
+{
+    TaskHandle_t xHandler = NULL;
     cuenta_mutex = xSemaphoreCreateMutex();
+    if (cuenta_mutex == NULL)
+        ESP_LOGE(TAG, "Fallo al crear cuenta_mutex");
+
     decima_mutex = xSemaphoreCreateMutex();
+    if (decima_mutex == NULL)
+        ESP_LOGE(TAG, "Fallo al crear decima_mutex");
+
     luz_verde_roja_mutex = xSemaphoreCreateMutex();
-    xTaskCreate(blinking, "Verde", 1024, (void *)&parametros[0], tskIDLE_PRIORITY, NULL);
-    xTaskCreate(red, "roja", 1024, (void *)&parametros[1], tskIDLE_PRIORITY, NULL);
-    xTaskCreate(leer_boton1, "boton1", 1024, NULL, tskIDLE_PRIORITY, NULL);
-    xTaskCreate(leer_boton2, "boton2", 2 * 1024, NULL, tskIDLE_PRIORITY, NULL);
-    xTaskCreate(contar_decima, "contar", 1024, NULL, tskIDLE_PRIORITY + 3, NULL);
-    xTaskCreate(dibujar_pantalla, "pantalla", 2048, NULL, tskIDLE_PRIORITY + 3, NULL);
+    if (luz_verde_roja_mutex == NULL)
+        ESP_LOGE(TAG, "Fallo al crear  luz_verde_roja_mutex");
+
+    if (xTaskCreate(blinking, "Verde", 1024, (void *)&parametros[0], tskIDLE_PRIORITY, &xHandler) != pdPASS)
+        ESP_LOGE(TAG, "Fallo al crear verde");
+    else
+        xHandler = NULL;
+
+    if (xTaskCreate(red, "roja", 1024, (void *)&parametros[1], tskIDLE_PRIORITY, &xHandler) != pdPASS)
+        ESP_LOGE(TAG, "Fallo al crear roja");
+    else
+        xHandler = NULL;
+ 
+    if (xTaskCreate(leer_boton1, "boton1", 1024, NULL, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+        ESP_LOGE(TAG, "Fallo al crear boton1 ");
+    else
+        xHandler = NULL;
+ 
+    if (xTaskCreate(leer_boton2, "boton2", 2 * 1024, NULL, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+        ESP_LOGE(TAG, "Fallo al crear boton2 ");
+    else
+        xHandler = NULL;
+ 
+    if (xTaskCreate(contar_decima, "contar", 1024, NULL, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
+        ESP_LOGE(TAG, "Fallo al crear contar");
+    else
+        xHandler = NULL;
+ 
+    if (xTaskCreate(dibujar_pantalla, "pantalla", 2048, NULL, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
+        ESP_LOGE(TAG, "Fallo al crear pantalla");
 }
 
 /* === End of documentation ========================================================================================= */
 
 /** @} End of module definition for doxygen */
-

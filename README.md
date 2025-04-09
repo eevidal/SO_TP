@@ -5,11 +5,13 @@ El cronómetro debe iniciar y detener la cuenta al presionar un pulsador conecta
 
 Mientras la cuenta está activa un led RGB debe parpadear en verde y cuando está detenida debe permanecer en rojo. 
 
+## Estructura de directorio del proyecto
 
 ```
 ├── CMakeLists.txt
 ├── main
 │   ├── CMakeLists.txt
+│   ├── LICENSE
 │   ├── digitos.c
 │   ├── digitos.h
 │   ├── fonts.c
