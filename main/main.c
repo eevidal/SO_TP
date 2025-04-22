@@ -27,6 +27,8 @@ SPDX-License-Identifier: MIT
 #include "digitos.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "teclas.h"
+#include "leds.h"
 
 /* === Macros definitions =========================================================================================== */
 
@@ -42,6 +44,12 @@ SPDX-License-Identifier: MIT
 #define BOTON1 GPIO_NUM_13
 #define BOTON2 GPIO_NUM_32
 #define BOTON3 GPIO_NUM_14
+
+#define BOTON_ESTADO  1<<0
+#define BOTON_BORRAR  1<<1
+#define BOTON_PARCIAL 1<<2
+#define BLINK         1<<3
+#define RED           1<<4
 
 /* === Private data type declarations =============================================================================== */
 
@@ -66,10 +74,6 @@ typedef enum
 
 /* === Private variable declarations ================================================================================ */
 
-static const struct blink parametros[] = {
-    {.led = LED_VERDE, .tiempo = 300},
-    {.led = LED_ROJO, .tiempo = 100},
-};
 
 static const char *TAG = "app_main";
 static const char *B2 = "boton_2";
@@ -204,60 +208,8 @@ void contar_decima(void *args)
         //   ESP_LOGI("CONTAR", "Decima: %d", decima);
     }
 }
-void blinking(void *args)
-{
-    blink_t parametros = (blink_t)args;
-    TickType_t lastEvent;
-    gpio_set_direction(parametros->led, GPIO_MODE_OUTPUT);
-    gpio_set_level(parametros->led, 0);
-    lastEvent = xTaskGetTickCount();
 
-    while (1)
-    {
 
-        if (xSemaphoreTake(luz_verde_roja_mutex, pdMS_TO_TICKS(50)) == pdTRUE)
-        {
-            if (luz_verde == ON)
-            {
-                gpio_set_level(parametros->led, 1);
-                vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(parametros->tiempo));
-                gpio_set_level(parametros->led, 0);
-                xSemaphoreGive(luz_verde_roja_mutex);
-                vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(parametros->tiempo));
-            }
-            else
-            {
-
-                gpio_set_level(parametros->led, 0); // Ensure LED is off when not blinking
-                xSemaphoreGive(luz_verde_roja_mutex);
-                vTaskDelay(pdMS_TO_TICKS(100));
-            }
-        }
-    }
-}
-
-void red(void *args)
-{
-    blink_t parametros = (blink_t)args;
-
-    gpio_set_direction(LED_ROJO, GPIO_MODE_OUTPUT);
-    gpio_set_level(parametros->led, 1);
-    while (1)
-    {
-        // tomar lock luz verde roja
-        if (xSemaphoreTake(luz_verde_roja_mutex, pdMS_TO_TICKS(50)) == pdTRUE)
-        {
-            if (luz_verde == ON)
-
-                gpio_set_level(parametros->led, 0);
-            else
-                gpio_set_level(parametros->led, 1);
-            xSemaphoreGive(luz_verde_roja_mutex);
-            // soltar lock luz verde roja
-        }
-        //  vTaskDelay();
-    }
-}
 
 void dibujar_pantalla(void *args)
 {
@@ -313,99 +265,171 @@ void dibujar_pantalla(void *args)
     }
 }
 
-void leer_boton1(void *args)
+void cambia_estado(void *args)
 {
-    gpio_set_direction(BOTON1, GPIO_MODE_INPUT);
-    gpio_pullup_en(BOTON1);
-    int level;
-    level = gpio_get_level(BOTON1);
+    EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
+ //   static state_t estado  = 0;
 
     while (1)
     {
-        while (level == 1)
-        {
-            level = gpio_get_level(BOTON1);
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
-        if (level == 0)
+
+        if (xEventGroupWaitBits(_event_group, BOTON_ESTADO , true, false, portMAX_DELAY))
         {
             // ESP_LOGI("B1", "presionado");
-            if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
-            {
+            { //tal vez haya que proteger a cuenta
                 if (cuenta == ON)
                 {
                     cuenta = OFF;
-                    if (xSemaphoreTake(luz_verde_roja_mutex, portMAX_DELAY) == pdTRUE)
+
                     {
-                        luz_verde = OFF;
-                        xSemaphoreGive(luz_verde_roja_mutex);
+                        xEventGroupClearBits(_event_group, BLINK); 
+                        xEventGroupSetBits(_event_group, RED); 
+
                     }
                 }
                 else
                 {
                     cuenta = ON;
-                    if (xSemaphoreTake(luz_verde_roja_mutex, portMAX_DELAY) == pdTRUE)
                     {
-                        luz_verde = ON;
-                        xSemaphoreGive(luz_verde_roja_mutex);
+                        xEventGroupClearBits(_event_group, RED); 
+                        xEventGroupSetBits(_event_group, BLINK); 
                     }
                 }
-                xSemaphoreGive(cuenta_mutex);
             }
 
             vTaskDelay(pdMS_TO_TICKS(20));
         }
-        while (level == 0)
-        {
-            level = gpio_get_level(BOTON1);
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
+
         // ESP_LOGI("B1", "no presionado");
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
-void leer_boton2(void *args)
+
+void borrar(void *args)
 {
-    gpio_set_direction(BOTON2, GPIO_MODE_INPUT);
-    gpio_pullup_en(BOTON2);
-    int level;
-    level = gpio_get_level(BOTON2);
+    EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
+ 
 
     while (1)
     {
-        while (level == 1)
-        {
-            level = gpio_get_level(BOTON2);
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
-        if (level == 0)
-        {
+
+        if (xEventGroupWaitBits(_event_group, BOTON_BORRAR , true, false, portMAX_DELAY))
+        {    xEventGroupClearBits(_event_group, BOTON_BORRAR); 
+
             if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
             {
                 if (cuenta == OFF)
                 {
                     volver_a_cero();
                 }
-                xSemaphoreGive(cuenta_mutex);
-                ESP_LOGI("B2", "presionado");
+            xSemaphoreGive(cuenta_mutex);
+            
             }
             vTaskDelay(pdMS_TO_TICKS(50));
         }
-        while (level == 0)
-        {
-            level = gpio_get_level(BOTON2);
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
-        ESP_LOGI("B2", "solto");
+
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
+
+void tarea_led(void * args){
+    led_task_t parametros = (led_task_t)args;
+    TickType_t lastEvent;
+    gpio_set_direction(parametros->gpio_id_red, GPIO_MODE_OUTPUT);
+    gpio_set_direction(parametros->gpio_id_verde, GPIO_MODE_OUTPUT);
+
+    lastEvent = xTaskGetTickCount();
+  
+    while(1){
+          EventBits_t uxBits = (xEventGroupWaitBits(parametros->event_group, RED | BLINK , true, false, portMAX_DELAY));
+          if ((uxBits & RED) !=0){
+              gpio_set_level(parametros->gpio_id_red, 1);
+          
+          } else   gpio_set_level(parametros->gpio_id_red, 0);
+
+          if ((uxBits & BLINK) != 0){
+
+                gpio_set_level(parametros->gpio_id_verde, 1);
+                vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(parametros->tiempo));
+                gpio_set_level(parametros->gpio_id_verde, 0);
+                vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(parametros->tiempo));
+
+          }
+          else{
+             gpio_set_level(parametros->gpio_id_verde, 0); 
+          }
+    }
+}
+
+
 void app_main(void)
 {
+    EventGroupHandle_t event_group;
     TaskHandle_t xHandler = NULL;
-    cuenta_mutex = xSemaphoreCreateMutex();
+    key_task_t  key_args;
+    led_task_t leds_args;
+
+    event_group = xEventGroupCreate();
+    if(event_group){
+        key_args = malloc(sizeof(key_task_t));
+        key_args->event_group = event_group;
+        key_args->gpio_id = BOTON1;
+        key_args->event_bit = BOTON_ESTADO;
+        if (xTaskCreate(tarea_tecla, "boton1", 1024, key_args, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+            ESP_LOGE(TAG, "Fallo al crear boton1 ");
+        else
+            xHandler = NULL;
+        key_args = malloc(sizeof(key_task_t));
+        key_args->event_group = event_group;
+        key_args->gpio_id = BOTON2;
+        key_args->event_bit = BOTON_BORRAR;
+        if (xTaskCreate(tarea_tecla, "boton1", 1024, key_args, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+            ESP_LOGE(TAG, "Fallo al crear boton2");
+        else
+            xHandler = NULL;
+        key_args = malloc(sizeof(key_task_t));
+        key_args->event_group = event_group;
+        key_args->gpio_id = BOTON3;
+        key_args->event_bit = BOTON_PARCIAL;
+        if (xTaskCreate(tarea_tecla, "boton3", 1024, key_args, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+            ESP_LOGE(TAG, "Fallo al crear boton3 ");
+        else
+            xHandler = NULL;
+
+        leds_args = malloc(sizeof(led_task_t));
+        leds_args->event_group = event_group;
+        leds_args->event_bit = RED | BLINK;
+        leds_args->tiempo = 200;
+        leds_args->gpio_id_red = LED_ROJO;
+        leds_args->gpio_id_verde = LED_VERDE;
+     
+        if (xTaskCreate(tarea_led, "led", 1024, leds_args, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+            ESP_LOGE(TAG, "Fallo al crear staus ");
+        else
+            xHandler = NULL;
+
+
+        if (xTaskCreate(cambia_estado, "status", 1024, event_group, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+            ESP_LOGE(TAG, "Fallo al crear staus ");
+        else
+            xHandler = NULL;
+
+        if (xTaskCreate(borrar, "borrar", 1024, event_group, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+            ESP_LOGE(TAG, "Fallo al crear borrado ");
+        else
+            xHandler = NULL;    
+
+
+    }
+    else
+        ESP_LOGE(TAG, "Fallo al crear Eventos ");
+
+  
+
+
+ /*   cuenta_mutex = xSemaphoreCreateMutex();
     if (cuenta_mutex == NULL)
         ESP_LOGE(TAG, "Fallo al crear cuenta_mutex");
 
@@ -443,7 +467,9 @@ void app_main(void)
         xHandler = NULL;
  
     if (xTaskCreate(dibujar_pantalla, "pantalla", 2048, NULL, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
-        ESP_LOGE(TAG, "Fallo al crear pantalla");
+        ESP_LOGE(TAG, "Fallo al crear pantalla");*/
+    
+
 }
 
 /* === End of documentation ========================================================================================= */
