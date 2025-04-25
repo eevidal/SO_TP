@@ -45,11 +45,12 @@ SPDX-License-Identifier: MIT
 #define BOTON2 GPIO_NUM_32
 #define BOTON3 GPIO_NUM_14
 
-#define BOTON_ESTADO  1<<0
-#define BOTON_BORRAR  1<<1
-#define BOTON_PARCIAL 1<<2
-#define BLINK         1<<3
-#define RED           1<<4
+#define BOTON_ESTADO 1 << 0
+#define BOTON_BORRAR 1 << 1
+#define BOTON_PARCIAL 1 << 2
+#define BLINK 1 << 3
+#define RED 1 << 4
+#define CUENTA 1 << 5
 
 /* === Private data type declarations =============================================================================== */
 
@@ -74,7 +75,6 @@ typedef enum
 
 /* === Private variable declarations ================================================================================ */
 
-
 static const char *TAG = "app_main";
 static const char *B2 = "boton_2";
 
@@ -96,7 +96,6 @@ SemaphoreHandle_t cuenta_mutex;
 // solo llamar con el mutex de cuenta tomado
 void volver_a_cero(void)
 {
-
     unidad = 0;
     decena = 0;
     centena = 0;
@@ -111,108 +110,89 @@ void volver_a_cero(void)
 
 void incrementar_segundo(digito_t digito_inicial)
 {
-    if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
+    digito_t digito_actual = digito_inicial;
+    bool carry = true;
+    while (carry)
     {
-        digito_t digito_actual = digito_inicial;
-        bool carry = true;
-        while (carry)
+        carry = false;
+        switch (digito_actual)
         {
-            carry = false;
-            switch (digito_actual)
+        case UNIDAD:
+            unidad++;
+            if (unidad > 9)
             {
-            case UNIDAD:
-                unidad++;
-                if (unidad > 9)
-                {
-                    unidad = 0;
-                    carry = true;
-                    digito_actual = DECENA;
-                }
-                break;
-            case DECENA:
-                decena++;
-                if (decena > 9)
-                {
-                    decena = 0;
-                    carry = true;
-                    digito_actual = CENTENA;
-                }
-                break;
-            case CENTENA:
-                centena++;
-                if (centena > 9)
-                {
-                    volver_a_cero();
-                    carry = false;
-                }
-                break;
-            default:
-                break;
+                unidad = 0;
+                carry = true;
+                digito_actual = DECENA;
             }
-
-            if (!carry)
+            break;
+        case DECENA:
+            decena++;
+            if (decena > 9)
             {
-                break;
+                decena = 0;
+                carry = true;
+                digito_actual = CENTENA;
             }
-
-            if (digito_actual > CENTENA)
+            break;
+        case CENTENA:
+            centena++;
+            if (centena > 9)
             {
-                break;
+                volver_a_cero();
+                carry = false;
             }
+            break;
+        default:
+            break;
         }
-        xSemaphoreGive(cuenta_mutex);
+
+        if (!carry)
+        {
+            break;
+        }
+
+        if (digito_actual > CENTENA)
+        {
+            break;
+        }
     }
 }
 /* === Public function implementation =============================================================================== */
 
 void contar_decima(void *args)
 {
+    EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
     TickType_t lastEvent;
     lastEvent = xTaskGetTickCount();
     while (1)
     {
         vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(100));
         // tomar el mutex de decima
-        if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
+        if (xEventGroupWaitBits(_event_group, CUENTA, pdFALSE, pdFALSE, portMAX_DELAY))
         {
-            if (cuenta == ON)
+            if (xSemaphoreTake(decima_mutex, portMAX_DELAY) == pdTRUE)
             {
-                if (xSemaphoreTake(decima_mutex, portMAX_DELAY) == pdTRUE)
+                decima = decima + 1;
+                if (decima == 9)
                 {
-                    decima = decima + 1;
-                    if (decima == 9)
-                    {
-                        decima = 0;
-                        // soltar el mutex
-                        xSemaphoreGive(decima_mutex);
-                        xSemaphoreGive(cuenta_mutex);
-                        incrementar_segundo(UNIDAD);
-                    }
-                    else
-                    {
-                        xSemaphoreGive(decima_mutex);
-                    }
+                    decima = 0;
+                    // soltar el mutex
+                    xSemaphoreGive(decima_mutex);
+                    incrementar_segundo(UNIDAD);
                 }
                 else
                 {
-                    // ESP_LOGI("CONTAR", "falle en tomar el lock decima\n");
+                    xSemaphoreGive(decima_mutex);
                 }
-            } // cuenta =OFF
-            xSemaphoreGive(cuenta_mutex);
-        }
-        else
-        {
-
-            //  ESP_LOGI("CONTAR", "falle en tomar el lock\n");
-        }
-        //   ESP_LOGI("CONTAR", "Decima: %d", decima);
+            }
+        } // cuenta =OFF
     }
 }
 
-
-
 void dibujar_pantalla(void *args)
 {
+    EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
     ILI9341Init();
     ILI9341Rotate(ILI9341_Landscape_1);
 
@@ -235,12 +215,11 @@ void dibujar_pantalla(void *args)
     while (1)
     {
         // tomar lock de cuenta
-        if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
+        if (xEventGroupWaitBits(_event_group, CUENTA, pdFALSE, pdFALSE, portMAX_DELAY))
         {
             unidad_act = unidad;
             decena_act = decena;
             centena_act = centena;
-            xSemaphoreGive(cuenta_mutex);
         } // soltar lock
         if (unidad_act != unidad_ant)
             DibujarDigito(segundos, 2, unidad_act);
@@ -268,111 +247,104 @@ void dibujar_pantalla(void *args)
 void cambia_estado(void *args)
 {
     EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
- //   static state_t estado  = 0;
-
+    //   static state_t estado  = 0;
     while (1)
     {
-
-        if (xEventGroupWaitBits(_event_group, BOTON_ESTADO , true, false, portMAX_DELAY))
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_ESTADO | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
         {
-            // ESP_LOGI("B1", "presionado");
-            { //tal vez haya que proteger a cuenta
-                if (cuenta == ON)
-                {
-                    cuenta = OFF;
 
-                    {
-                        xEventGroupClearBits(_event_group, BLINK); 
-                        xEventGroupSetBits(_event_group, RED); 
-
-                    }
-                }
-                else
-                {
-                    cuenta = ON;
-                    {
-                        xEventGroupClearBits(_event_group, RED); 
-                        xEventGroupSetBits(_event_group, BLINK); 
-                    }
-                }
+            if ((wBits & CUENTA) && (wBits & BOTON_ESTADO))
+            {
+                xEventGroupClearBits(_event_group, CUENTA);
+                xEventGroupClearBits(_event_group, BOTON_ESTADO);
+                xEventGroupClearBits(_event_group, BLINK);
+                xEventGroupSetBits(_event_group, RED);
             }
-
-            vTaskDelay(pdMS_TO_TICKS(20));
+            else if (wBits & BOTON_ESTADO)
+            {
+                xEventGroupSetBits(_event_group, CUENTA);
+                xEventGroupClearBits(_event_group, RED);
+                xEventGroupSetBits(_event_group, BLINK);
+                xEventGroupClearBits(_event_group, BOTON_ESTADO);
+            }
         }
-
-        // ESP_LOGI("B1", "no presionado");
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
-
 
 void borrar(void *args)
 {
     EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
- 
-
     while (1)
     {
-
-        if (xEventGroupWaitBits(_event_group, BOTON_BORRAR , true, false, portMAX_DELAY))
-        {    xEventGroupClearBits(_event_group, BOTON_BORRAR); 
-
-            if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_BORRAR | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
+        {
+            //   if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
             {
-                if (cuenta == OFF)
+                if ((wBits & CUENTA))
                 {
+                    vTaskDelay(pdMS_TO_TICKS(50));
+                    continue;
+                }
+                else if ((wBits & BOTON_BORRAR))
+                {
+                    xEventGroupClearBits(_event_group, BOTON_BORRAR);
                     volver_a_cero();
                 }
-            xSemaphoreGive(cuenta_mutex);
-            
+                //   xSemaphoreGive(cuenta_mutex);
             }
-            vTaskDelay(pdMS_TO_TICKS(50));
         }
-
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
-
-void tarea_led(void * args){
+void tarea_led(void *args)
+{
     led_task_t parametros = (led_task_t)args;
     TickType_t lastEvent;
     gpio_set_direction(parametros->gpio_id_red, GPIO_MODE_OUTPUT);
     gpio_set_direction(parametros->gpio_id_verde, GPIO_MODE_OUTPUT);
 
     lastEvent = xTaskGetTickCount();
-  
-    while(1){
-          EventBits_t uxBits = (xEventGroupWaitBits(parametros->event_group, RED | BLINK , true, false, portMAX_DELAY));
-          if ((uxBits & RED) !=0){
-              gpio_set_level(parametros->gpio_id_red, 1);
-          
-          } else   gpio_set_level(parametros->gpio_id_red, 0);
 
-          if ((uxBits & BLINK) != 0){
+    while (1)
+    {
+        EventBits_t uxBits = (xEventGroupWaitBits(parametros->event_group, RED | BLINK, pdFALSE, pdFALSE, portMAX_DELAY));
+        if ((uxBits & RED) != 0)
+        {
+            gpio_set_level(parametros->gpio_id_red, 1);
+        }
+        else
+            gpio_set_level(parametros->gpio_id_red, 0);
 
-                gpio_set_level(parametros->gpio_id_verde, 1);
-                vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(parametros->tiempo));
-                gpio_set_level(parametros->gpio_id_verde, 0);
-                vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(parametros->tiempo));
-
-          }
-          else{
-             gpio_set_level(parametros->gpio_id_verde, 0); 
-          }
+        if ((uxBits & BLINK) != 0)
+        {
+            gpio_set_level(parametros->gpio_id_verde, 1);
+            vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(parametros->tiempo));
+            gpio_set_level(parametros->gpio_id_verde, 0);
+            vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(parametros->tiempo));
+        }
+        else
+        {
+            gpio_set_level(parametros->gpio_id_verde, 0);
+        }
     }
 }
-
 
 void app_main(void)
 {
     EventGroupHandle_t event_group;
     TaskHandle_t xHandler = NULL;
-    key_task_t  key_args;
+    key_task_t key_args;
     led_task_t leds_args;
+    decima_mutex = xSemaphoreCreateMutex();
+    if (decima_mutex == NULL)
+        ESP_LOGE(TAG, "Fallo al crear decima_mutex");
 
     event_group = xEventGroupCreate();
-    if(event_group){
+
+    if (event_group)
+    {
         key_args = malloc(sizeof(key_task_t));
         key_args->event_group = event_group;
         key_args->gpio_id = BOTON1;
@@ -404,12 +376,11 @@ void app_main(void)
         leds_args->tiempo = 200;
         leds_args->gpio_id_red = LED_ROJO;
         leds_args->gpio_id_verde = LED_VERDE;
-     
+
         if (xTaskCreate(tarea_led, "led", 1024, leds_args, tskIDLE_PRIORITY, &xHandler) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear staus ");
         else
             xHandler = NULL;
-
 
         if (xTaskCreate(cambia_estado, "status", 1024, event_group, tskIDLE_PRIORITY, &xHandler) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear staus ");
@@ -419,57 +390,27 @@ void app_main(void)
         if (xTaskCreate(borrar, "borrar", 1024, event_group, tskIDLE_PRIORITY, &xHandler) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear borrado ");
         else
-            xHandler = NULL;    
+            xHandler = NULL;
 
+        if (xTaskCreate(contar_decima, "contar", 1024, event_group, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
+            ESP_LOGE(TAG, "Fallo al crear contar");
+        else
+            xHandler = NULL;
 
+        if (xTaskCreate(dibujar_pantalla, "pantalla", 2048, NULL, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
+            ESP_LOGE(TAG, "Fallo al crear pantalla");
     }
     else
         ESP_LOGE(TAG, "Fallo al crear Eventos ");
 
-  
+    /*
 
 
- /*   cuenta_mutex = xSemaphoreCreateMutex();
-    if (cuenta_mutex == NULL)
-        ESP_LOGE(TAG, "Fallo al crear cuenta_mutex");
 
-    decima_mutex = xSemaphoreCreateMutex();
-    if (decima_mutex == NULL)
-        ESP_LOGE(TAG, "Fallo al crear decima_mutex");
 
-    luz_verde_roja_mutex = xSemaphoreCreateMutex();
-    if (luz_verde_roja_mutex == NULL)
-        ESP_LOGE(TAG, "Fallo al crear  luz_verde_roja_mutex");
 
-    if (xTaskCreate(blinking, "Verde", 1024, (void *)&parametros[0], tskIDLE_PRIORITY, &xHandler) != pdPASS)
-        ESP_LOGE(TAG, "Fallo al crear verde");
-    else
-        xHandler = NULL;
-
-    if (xTaskCreate(red, "roja", 1024, (void *)&parametros[1], tskIDLE_PRIORITY, &xHandler) != pdPASS)
-        ESP_LOGE(TAG, "Fallo al crear roja");
-    else
-        xHandler = NULL;
- 
-    if (xTaskCreate(leer_boton1, "boton1", 1024, NULL, tskIDLE_PRIORITY, &xHandler) != pdPASS)
-        ESP_LOGE(TAG, "Fallo al crear boton1 ");
-    else
-        xHandler = NULL;
- 
-    if (xTaskCreate(leer_boton2, "boton2", 2 * 1024, NULL, tskIDLE_PRIORITY, &xHandler) != pdPASS)
-        ESP_LOGE(TAG, "Fallo al crear boton2 ");
-    else
-        xHandler = NULL;
- 
-    if (xTaskCreate(contar_decima, "contar", 1024, NULL, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
-        ESP_LOGE(TAG, "Fallo al crear contar");
-    else
-        xHandler = NULL;
- 
-    if (xTaskCreate(dibujar_pantalla, "pantalla", 2048, NULL, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
-        ESP_LOGE(TAG, "Fallo al crear pantalla");*/
-    
-
+       if (xTaskCreate(dibujar_pantalla, "pantalla", 2048, NULL, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
+           ESP_LOGE(TAG, "Fallo al crear pantalla");*/
 }
 
 /* === End of documentation ========================================================================================= */
