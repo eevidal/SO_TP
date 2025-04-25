@@ -43,7 +43,7 @@ SPDX-License-Identifier: MIT
 
 #define BOTON1 GPIO_NUM_13
 #define BOTON2 GPIO_NUM_32
-#define BOTON3 GPIO_NUM_14
+#define BOTON3 GPIO_NUM_35
 
 #define BOTON_ESTADO 1 << 0
 #define BOTON_BORRAR 1 << 1
@@ -51,6 +51,7 @@ SPDX-License-Identifier: MIT
 #define BLINK 1 << 3
 #define RED 1 << 4
 #define CUENTA 1 << 5
+#define BORRAR_PANTALLA 1<<6
 
 /* === Private data type declarations =============================================================================== */
 
@@ -76,7 +77,7 @@ typedef enum
 /* === Private variable declarations ================================================================================ */
 
 static const char *TAG = "app_main";
-static const char *B2 = "boton_2";
+//static const char *B2 = "boton_2";
 
 /* === Public variable definitions ================================================================================== */
 
@@ -169,7 +170,7 @@ void contar_decima(void *args)
     {
         vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(100));
         // tomar el mutex de decima
-        if (xEventGroupWaitBits(_event_group, CUENTA, pdFALSE, pdFALSE, portMAX_DELAY))
+        if (xEventGroupWaitBits(_event_group, CUENTA, pdFALSE, pdFALSE, portMAX_DELAY)!=0)
         {
             if (xSemaphoreTake(decima_mutex, portMAX_DELAY) == pdTRUE)
             {
@@ -215,12 +216,12 @@ void dibujar_pantalla(void *args)
     while (1)
     {
         // tomar lock de cuenta
-        if (xEventGroupWaitBits(_event_group, CUENTA, pdFALSE, pdFALSE, portMAX_DELAY))
+        if (xEventGroupWaitBits(_event_group, CUENTA | BORRAR_PANTALLA, pdFALSE, pdFALSE, portMAX_DELAY))
         {
             unidad_act = unidad;
             decena_act = decena;
             centena_act = centena;
-        } // soltar lock
+        } 
         if (unidad_act != unidad_ant)
             DibujarDigito(segundos, 2, unidad_act);
         if (decena_act != decena_ant)
@@ -250,25 +251,28 @@ void cambia_estado(void *args)
     //   static state_t estado  = 0;
     while (1)
     {
-        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_ESTADO | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_ESTADO|CUENTA|BORRAR_PANTALLA, pdFALSE, pdFALSE, portMAX_DELAY));
         {
 
-            if ((wBits & CUENTA) && (wBits & BOTON_ESTADO))
+            if (((wBits & CUENTA)!=0) && ((wBits & BOTON_ESTADO)!=0))
             {
                 xEventGroupClearBits(_event_group, CUENTA);
                 xEventGroupClearBits(_event_group, BOTON_ESTADO);
                 xEventGroupClearBits(_event_group, BLINK);
                 xEventGroupSetBits(_event_group, RED);
+                xEventGroupSetBits(_event_group, BORRAR_PANTALLA);
             }
-            else if (wBits & BOTON_ESTADO)
+            else if ((wBits & BOTON_ESTADO)!=0)
             {
+         
+                xEventGroupClearBits(_event_group, BOTON_ESTADO);
                 xEventGroupSetBits(_event_group, CUENTA);
                 xEventGroupClearBits(_event_group, RED);
                 xEventGroupSetBits(_event_group, BLINK);
-                xEventGroupClearBits(_event_group, BOTON_ESTADO);
+               
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(20));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
@@ -281,15 +285,15 @@ void borrar(void *args)
         {
             //   if (xSemaphoreTake(cuenta_mutex, portMAX_DELAY) == pdTRUE)
             {
-                if ((wBits & CUENTA))
+                if ((wBits & CUENTA)!=0)
                 {
-                    vTaskDelay(pdMS_TO_TICKS(50));
                     continue;
                 }
-                else if ((wBits & BOTON_BORRAR))
+                else if ((wBits & BOTON_BORRAR)!=0)
                 {
                     xEventGroupClearBits(_event_group, BOTON_BORRAR);
                     volver_a_cero();
+                  
                 }
                 //   xSemaphoreGive(cuenta_mutex);
             }
@@ -345,7 +349,7 @@ void app_main(void)
 
     if (event_group)
     {
-        key_args = malloc(sizeof(key_task_t));
+        key_args = malloc(3*sizeof(key_task_t));
         key_args->event_group = event_group;
         key_args->gpio_id = BOTON1;
         key_args->event_bit = BOTON_ESTADO;
@@ -353,15 +357,15 @@ void app_main(void)
             ESP_LOGE(TAG, "Fallo al crear boton1 ");
         else
             xHandler = NULL;
-        key_args = malloc(sizeof(key_task_t));
+        key_args = malloc(3*sizeof(key_task_t));
         key_args->event_group = event_group;
         key_args->gpio_id = BOTON2;
         key_args->event_bit = BOTON_BORRAR;
-        if (xTaskCreate(tarea_tecla, "boton1", 1024, key_args, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+        if (xTaskCreate(tarea_tecla, "boton2", 1024, key_args, tskIDLE_PRIORITY, &xHandler) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear boton2");
         else
             xHandler = NULL;
-        key_args = malloc(sizeof(key_task_t));
+        key_args = malloc(3*sizeof(key_task_t));
         key_args->event_group = event_group;
         key_args->gpio_id = BOTON3;
         key_args->event_bit = BOTON_PARCIAL;
@@ -370,7 +374,7 @@ void app_main(void)
         else
             xHandler = NULL;
 
-        leds_args = malloc(sizeof(led_task_t));
+        leds_args = malloc(5*sizeof(led_task_t));
         leds_args->event_group = event_group;
         leds_args->event_bit = RED | BLINK;
         leds_args->tiempo = 200;
@@ -397,7 +401,7 @@ void app_main(void)
         else
             xHandler = NULL;
 
-        if (xTaskCreate(dibujar_pantalla, "pantalla", 2048, NULL, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
+        if (xTaskCreate(dibujar_pantalla, "pantalla", 2048, event_group, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear pantalla");
     }
     else
