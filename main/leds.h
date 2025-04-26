@@ -6,7 +6,8 @@
 
 typedef struct {
     EventGroupHandle_t event_group;
-    uint8_t event_bit;
+    uint8_t mask_verde;
+    uint8_t mask_red;
     gpio_num_t gpio_id_red;
     gpio_num_t gpio_id_verde;
     uint16_t tiempo;
