@@ -18,6 +18,7 @@ void tarea_led(void *args)
         {
             gpio_set_level(parametros->gpio_id_verde, 0);
             gpio_set_level(parametros->gpio_id_red, 1);
+            lastEvent = xTaskGetTickCount();
         }
 
         if ((uxBits & parametros->mask_verde) != 0)

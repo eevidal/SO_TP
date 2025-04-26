@@ -51,8 +51,9 @@ SPDX-License-Identifier: MIT
 #define BLINK 1 << 3
 #define RED 1 << 4
 #define CUENTA 1 << 5
-#define REFRESCO_PANTALLA 1<<6
-#define RESET 1<<7
+#define REFRESCO_PANTALLA 1 << 6
+#define RESET 1 << 7
+#define EN_PAUSA 1<<8
 /* === Private data type declarations =============================================================================== */
 
 typedef struct blink
@@ -77,7 +78,7 @@ typedef enum
 /* === Private variable declarations ================================================================================ */
 
 static const char *TAG = "app_main";
-//static const char *B2 = "boton_2";
+// static const char *B2 = "boton_2";
 
 /* === Public variable definitions ================================================================================== */
 
@@ -86,11 +87,7 @@ int unidad = 0;
 int decena = 0;
 int centena = 0;
 
-SemaphoreHandle_t decima_mutex;
-SemaphoreHandle_t cuenta_mutex;
-
 /* === Private function implementation ============================================================================== */
-
 
 void incrementar_segundo(digito_t digito_inicial)
 {
@@ -152,36 +149,39 @@ void contar_decima(void *args)
     EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
     TickType_t lastEvent;
     lastEvent = xTaskGetTickCount();
- 
+
     while (1)
     {
-        EventBits_t wBits =  xEventGroupWaitBits(_event_group, CUENTA | RESET , pdFALSE, pdFALSE,  portMAX_DELAY);
-        ESP_LOGI(TAG, "Estado de los bits en contar_decima: %lu", wBits);
-        if ((wBits & CUENTA )!=0)
-        {     
-         
-                decima = decima + 1;
-                xEventGroupSetBits(_event_group, REFRESCO_PANTALLA);
-                ESP_LOGI(TAG, "Bit REFRESCO_PANTALLA activado");
-                if (decima == 9)
-                {
-                    decima = 0;
-                    // soltar el mutex
-                    incrementar_segundo(UNIDAD);  
-                }     
-        } 
-       if ((wBits & RESET )!=0)
-        {     
-                decima = 0;
-                unidad = 0;
-                decena = 0;
-                centena = 0;
+        EventBits_t wBits = xEventGroupWaitBits(_event_group, CUENTA | RESET | EN_PAUSA, pdFALSE, pdFALSE, portMAX_DELAY);
+        //ESP_LOGI(TAG, "Estado de los bits en contar_decima: %lu", wBits);
+        if ((wBits & CUENTA) != 0)
+        {
+            //al volver de la pausa, reinicio el lastEvent
+            if ((wBits & EN_PAUSA) != 0){ 
+                xEventGroupClearBits(_event_group,EN_PAUSA);
+                lastEvent = xTaskGetTickCount();
 
-                xEventGroupClearBits(_event_group, RESET);
-                ESP_LOGI(TAG, "Bit de RESET desactivado");
-                xEventGroupSetBits(_event_group, REFRESCO_PANTALLA);
-     
-        } 
+            }
+            // ESP_LOGI(TAG, "CUENTA activado - Tick actual: %lu, Last Event: %lu", xTaskGetTickCount(), lastEvent);
+            decima = decima + 1;
+            xEventGroupSetBits(_event_group, REFRESCO_PANTALLA);
+            // ESP_LOGI(TAG, "Bit REFRESCO_PANTALLA activado");
+            if (decima == 9)
+            {
+                decima = 0;
+                incrementar_segundo(UNIDAD);
+            }
+        }
+        if ((wBits & RESET) != 0)
+        {
+            decima = 0;
+            unidad = 0;
+            decena = 0;
+            centena = 0;
+
+            xEventGroupClearBits(_event_group, RESET);
+            xEventGroupSetBits(_event_group, REFRESCO_PANTALLA);
+        }
         vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(100));
     }
 }
@@ -210,14 +210,13 @@ void dibujar_pantalla(void *args)
     ILI9341DrawFilledCircle(220, 150, 5, DIGITO_ENCENDIDO);
     while (1)
     {
-        // tomar lock de cuenta
         if (xEventGroupWaitBits(_event_group, REFRESCO_PANTALLA, pdTRUE, pdFALSE, portMAX_DELAY))
         {
             unidad_act = unidad;
             decena_act = decena;
             centena_act = centena;
-            ESP_LOGI(TAG, "Valores en dibujar_pantalla: %d, %d, %d, %d", unidad_act, decena_act, centena_act, decima);
-        } 
+         //   ESP_LOGI(TAG, "Valores en dibujar_pantalla: %d, %d, %d, %d", unidad_act, decena_act, centena_act, decima);
+        }
         if (unidad_act != unidad_ant)
             DibujarDigito(segundos, 2, unidad_act);
         if (decena_act != decena_ant)
@@ -229,13 +228,11 @@ void dibujar_pantalla(void *args)
         centena_ant = centena_act;
 
         ILI9341DrawFilledCircle(220, 150, 5, DIGITO_ENCENDIDO);
-   //     if (xSemaphoreTake(decima_mutex, portMAX_DELAY) == pdTRUE)
         {
             decima_act = decima;
-     //       xSemaphoreGive(decima_mutex);
         }
         if (decima_act != decima_ant)
-        DibujarDigito(decimas, 0, decima);
+            DibujarDigito(decimas, 0, decima);
         decima_ant = decima_act;
     }
 }
@@ -243,23 +240,21 @@ void dibujar_pantalla(void *args)
 void cambia_estado(void *args)
 {
     EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
-    //   static state_t estado  = 0;
     while (1)
     {
-        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_ESTADO|CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_ESTADO | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
         {
-
-        ESP_LOGI(TAG, "Estado de los bits en cambia_estado: %lu", wBits);
-        if (((wBits & CUENTA)!=0) && ((wBits & BOTON_ESTADO)!=0))
-        {
+           // ESP_LOGI(TAG, "Estado de los bits en cambia_estado: %lu", wBits);
+            if (((wBits & CUENTA) != 0) && ((wBits & BOTON_ESTADO) != 0))
+            {
                 xEventGroupClearBits(_event_group, CUENTA);
                 xEventGroupClearBits(_event_group, BOTON_ESTADO);
                 xEventGroupClearBits(_event_group, BOTON_BORRAR);
                 xEventGroupClearBits(_event_group, BLINK);
-
+                xEventGroupSetBits(_event_group, EN_PAUSA);
                 xEventGroupSetBits(_event_group, RED);
             }
-            else if ((wBits & BOTON_ESTADO)!=0)
+            else if ((wBits & BOTON_ESTADO) != 0)
             {
                 xEventGroupSetBits(_event_group, BLINK);
                 xEventGroupSetBits(_event_group, CUENTA);
@@ -268,8 +263,7 @@ void cambia_estado(void *args)
                 xEventGroupClearBits(_event_group, RED);
                 xEventGroupClearBits(_event_group, BOTON_BORRAR);
 
-
-                vTaskDelay(pdMS_TO_TICKS(20)); 
+                vTaskDelay(pdMS_TO_TICKS(20));
             }
         }
     }
@@ -282,64 +276,54 @@ void borrar(void *args)
     {
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_BORRAR | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
         {
-            
-                if ((wBits & CUENTA)!=0)
-                {
-                    continue;
-                }
-                else if ((wBits & BOTON_BORRAR)!=0) //solo borrar si la cuenta está detenida
-                {
-                    xEventGroupClearBits(_event_group, BOTON_BORRAR);
-                    xEventGroupSetBits(_event_group, RESET);
-                }
-            
+            if ((wBits & CUENTA) != 0)
+            {
+                continue;
+            }
+            else if ((wBits & BOTON_BORRAR) != 0) // solo borrar si la cuenta está detenida
+            {
+                xEventGroupClearBits(_event_group, BOTON_BORRAR);
+                xEventGroupSetBits(_event_group, RESET);
+            }
         }
-
     }
 }
-
-
 
 void app_main(void)
 {
     EventGroupHandle_t event_group;
-    TaskHandle_t xHandler = NULL;
     key_task_t key_args;
     led_task_t leds_args;
-    decima_mutex = xSemaphoreCreateMutex();
-    if (decima_mutex == NULL)
-        ESP_LOGE(TAG, "Fallo al crear decima_mutex");
 
     event_group = xEventGroupCreate();
 
+    xEventGroupSetBits(event_group,RED);
+    xEventGroupSetBits(event_group,EN_PAUSA);
+
     if (event_group)
     {
-        key_args = malloc(3*sizeof(key_task_t));
+        key_args = malloc(3 * sizeof(key_task_t));
         key_args->event_group = event_group;
         key_args->gpio_id = BOTON1;
         key_args->event_bit = BOTON_ESTADO;
-        if (xTaskCreate(tarea_tecla, "boton1", 1024, key_args, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+        if (xTaskCreate(tarea_tecla, "boton1", 1024, key_args, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear boton1 ");
-        else
-            xHandler = NULL;
-        key_args = malloc(3*sizeof(key_task_t));
+    
+        key_args = malloc(3 * sizeof(key_task_t));
         key_args->event_group = event_group;
         key_args->gpio_id = BOTON2;
         key_args->event_bit = BOTON_BORRAR;
-        if (xTaskCreate(tarea_tecla, "boton2", 1024, key_args, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+        if (xTaskCreate(tarea_tecla, "boton2", 1024, key_args, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear boton2");
-        else
-            xHandler = NULL;
-        key_args = malloc(3*sizeof(key_task_t));
+
+        key_args = malloc(3 * sizeof(key_task_t));
         key_args->event_group = event_group;
         key_args->gpio_id = BOTON3;
         key_args->event_bit = BOTON_PARCIAL;
-        if (xTaskCreate(tarea_tecla, "boton3", 1024, key_args, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+        if (xTaskCreate(tarea_tecla, "boton3", 1024, key_args, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear boton3 ");
-        else
-            xHandler = NULL;
 
-        leds_args = malloc(5*sizeof(led_task_t));
+        leds_args = malloc(5 * sizeof(led_task_t));
         leds_args->event_group = event_group;
         leds_args->mask_red = RED;
         leds_args->mask_verde = BLINK;
@@ -347,40 +331,24 @@ void app_main(void)
         leds_args->gpio_id_red = LED_ROJO;
         leds_args->gpio_id_verde = LED_VERDE;
 
-        if (xTaskCreate(tarea_led, "led", 1024, leds_args, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+        if (xTaskCreate(tarea_led, "led", 1024, leds_args, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear staus ");
-        else
-            xHandler = NULL;
 
-        if (xTaskCreate(cambia_estado, "status", 2*1024, event_group, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+        if (xTaskCreate(cambia_estado, "status", 2 * 1024, event_group, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear staus ");
-        else
-            xHandler = NULL;
 
-        if (xTaskCreate(borrar, "borrar", 1024, event_group, tskIDLE_PRIORITY, &xHandler) != pdPASS)
+        if (xTaskCreate(borrar, "borrar", 1024, event_group, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear borrado ");
-        else
-            xHandler = NULL;
 
-        if (xTaskCreate(contar_decima, "contar", 2*1024, event_group, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
+        if (xTaskCreate(contar_decima, "contar", 2 * 1024, event_group, tskIDLE_PRIORITY + 3, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear contar");
-        else
-            xHandler = NULL;
 
-        if (xTaskCreate(dibujar_pantalla, "pantalla", 2048, event_group, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
+        if (xTaskCreate(dibujar_pantalla, "pantalla", 2048, event_group, tskIDLE_PRIORITY + 2, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear pantalla");
     }
     else
         ESP_LOGE(TAG, "Fallo al crear Eventos ");
 
-    /*
-
-
-
-
-
-       if (xTaskCreate(dibujar_pantalla, "pantalla", 2048, NULL, tskIDLE_PRIORITY + 3, &xHandler) != pdPASS)
-           ESP_LOGE(TAG, "Fallo al crear pantalla");*/
 }
 
 /* === End of documentation ========================================================================================= */
