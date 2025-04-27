@@ -29,6 +29,7 @@ SPDX-License-Identifier: MIT
 #include "esp_log.h"
 #include "teclas.h"
 #include "leds.h"
+#include "time_struct.h"
 
 /* === Macros definitions =========================================================================================== */
 
@@ -53,134 +54,61 @@ SPDX-License-Identifier: MIT
 #define CUENTA 1 << 5
 #define REFRESCO_PANTALLA 1 << 6
 #define RESET 1 << 7
-#define EN_PAUSA 1<<8
+#define EN_PAUSA 1 << 8
+#define PARCIAL 1 << 9
 /* === Private data type declarations =============================================================================== */
 
-typedef struct blink
+typedef struct CronoParams
 {
-    gpio_num_t led;
-    uint16_t tiempo;
-} *blink_t;
+    time_struct_t time;
+    EventGroupHandle_t event_group;
+} CronoParams;
 
-typedef enum
-{
-    UNIDAD = 0,
-    DECENA = 1,
-    CENTENA = 2
-} digito_t;
-
-typedef enum
-{
-    OFF = 0,
-    ON = 1,
-} state_t;
+typedef struct CronoParams *CronoParams_t;
 
 /* === Private variable declarations ================================================================================ */
 
 static const char *TAG = "app_main";
 // static const char *B2 = "boton_2";
 
-/* === Public variable definitions ================================================================================== */
-
-volatile int decima = 0;
-int unidad = 0;
-int decena = 0;
-int centena = 0;
-
-/* === Private function implementation ============================================================================== */
-
-void incrementar_segundo(digito_t digito_inicial)
-{
-    digito_t digito_actual = digito_inicial;
-    bool carry = true;
-    while (carry)
-    {
-        carry = false;
-        switch (digito_actual)
-        {
-        case UNIDAD:
-            unidad++;
-            if (unidad > 9)
-            {
-                unidad = 0;
-                carry = true;
-                digito_actual = DECENA;
-            }
-            break;
-        case DECENA:
-            decena++;
-            if (decena > 9)
-            {
-                decena = 0;
-                carry = true;
-                digito_actual = CENTENA;
-            }
-            break;
-        case CENTENA:
-            centena++;
-            if (centena > 9)
-            {
-                unidad = 0;
-                decena = 0;
-                centena = 0;
-                decima = 0;
-                carry = false;
-            }
-            break;
-        default:
-            break;
-        }
-
-        if (!carry)
-        {
-            break;
-        }
-
-        if (digito_actual > CENTENA)
-        {
-            break;
-        }
-    }
-}
 /* === Public function implementation =============================================================================== */
 
 void contar_decima(void *args)
 {
-    EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
+    CronoParams_t cronometro_p = (CronoParams_t)args;
+    EventGroupHandle_t _event_group = cronometro_p->event_group;
     TickType_t lastEvent;
+    time_struct_t cronometro = cronometro_p->time;
+    time_cero(cronometro);
     lastEvent = xTaskGetTickCount();
 
     while (1)
     {
         EventBits_t wBits = xEventGroupWaitBits(_event_group, CUENTA | RESET | EN_PAUSA, pdFALSE, pdFALSE, portMAX_DELAY);
-        //ESP_LOGI(TAG, "Estado de los bits en contar_decima: %lu", wBits);
+        // ESP_LOGI(TAG, "Estado de los bits en contar_decima: %lu", wBits);
         if ((wBits & CUENTA) != 0)
         {
-            //al volver de la pausa, reinicio el lastEvent
-            if ((wBits & EN_PAUSA) != 0){ 
-                xEventGroupClearBits(_event_group,EN_PAUSA);
+            // al volver de la pausa, reinicio el lastEvent
+            if ((wBits & EN_PAUSA) != 0)
+            {
+                xEventGroupClearBits(_event_group, EN_PAUSA);
                 lastEvent = xTaskGetTickCount();
-
             }
             // ESP_LOGI(TAG, "CUENTA activado - Tick actual: %lu, Last Event: %lu", xTaskGetTickCount(), lastEvent);
-            decima = decima + 1;
+            time_tick(cronometro);
             xEventGroupSetBits(_event_group, REFRESCO_PANTALLA);
             // ESP_LOGI(TAG, "Bit REFRESCO_PANTALLA activado");
-            if (decima == 9)
-            {
-                decima = 0;
-                incrementar_segundo(UNIDAD);
-            }
         }
         if ((wBits & RESET) != 0)
         {
-            decima = 0;
-            unidad = 0;
-            decena = 0;
-            centena = 0;
-
+            time_cero(cronometro);
             xEventGroupClearBits(_event_group, RESET);
             xEventGroupSetBits(_event_group, REFRESCO_PANTALLA);
+        }
+        if ((wBits & PARCIAL) != 0)
+        {
+            xEventGroupClearBits(_event_group, PARCIAL);
+            // encolar cuenta
         }
         vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(100));
     }
@@ -194,7 +122,8 @@ void dibujar_pantalla(void *args)
 
     panel_t segundos = CrearPanel(30, 60, 3, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
     panel_t decimas = CrearPanel(230, 60, 1, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-
+    time_struct_t parcial[3];
+    time_struct_t tiempo;
     int unidad_ant = 0;
     int decena_ant = 0;
     int centena_ant = 0;
@@ -212,27 +141,27 @@ void dibujar_pantalla(void *args)
     {
         if (xEventGroupWaitBits(_event_group, REFRESCO_PANTALLA, pdTRUE, pdFALSE, portMAX_DELAY))
         {
-            unidad_act = unidad;
-            decena_act = decena;
-            centena_act = centena;
-         //   ESP_LOGI(TAG, "Valores en dibujar_pantalla: %d, %d, %d, %d", unidad_act, decena_act, centena_act, decima);
+            /*   unidad_act = unidad;
+               decena_act = decena;
+               centena_act = centena;*/
+            //   ESP_LOGI(TAG, "Valores en dibujar_pantalla: %d, %d, %d, %d", unidad_act, decena_act, centena_act, decima);
         }
         if (unidad_act != unidad_ant)
             DibujarDigito(segundos, 2, unidad_act);
         if (decena_act != decena_ant)
             DibujarDigito(segundos, 1, decena_act);
         if (centena_act != centena_ant)
-            DibujarDigito(segundos, 0, centena);
+            DibujarDigito(segundos, 0, centena_act);
         unidad_ant = unidad_act;
         decena_ant = decena_act;
         centena_ant = centena_act;
 
         ILI9341DrawFilledCircle(220, 150, 5, DIGITO_ENCENDIDO);
         {
-            decima_act = decima;
+            //     decima_act = decima;
         }
         if (decima_act != decima_ant)
-            DibujarDigito(decimas, 0, decima);
+            DibujarDigito(decimas, 0, decima_act);
         decima_ant = decima_act;
     }
 }
@@ -244,7 +173,7 @@ void cambia_estado(void *args)
     {
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_ESTADO | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
         {
-           // ESP_LOGI(TAG, "Estado de los bits en cambia_estado: %lu", wBits);
+            // ESP_LOGI(TAG, "Estado de los bits en cambia_estado: %lu", wBits);
             if (((wBits & CUENTA) != 0) && ((wBits & BOTON_ESTADO) != 0))
             {
                 xEventGroupClearBits(_event_group, CUENTA);
@@ -296,7 +225,7 @@ void tomar_parcial(void *args)
     {
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_PARCIAL | CUENTA, pdFALSE, pdTRUE, portMAX_DELAY));
         {
-             ESP_LOGI(TAG, "Estado de los bits en tomar_parcial: %lu", wBits);
+            ESP_LOGI(TAG, "Estado de los bits en tomar_parcial: %lu", wBits);
         }
     }
 }
@@ -306,36 +235,37 @@ void app_main(void)
     EventGroupHandle_t event_group;
     key_task_t key_args;
     led_task_t leds_args;
+    CronoParams_t crono_args;
 
     event_group = xEventGroupCreate();
 
-    xEventGroupSetBits(event_group,RED);
-    xEventGroupSetBits(event_group,EN_PAUSA);
+    xEventGroupSetBits(event_group, RED);
+    xEventGroupSetBits(event_group, EN_PAUSA);
 
     if (event_group)
     {
-        key_args = malloc(3 * sizeof(key_task_t));
+        key_args = malloc(sizeof(key_task));
         key_args->event_group = event_group;
         key_args->gpio_id = BOTON1;
         key_args->event_bit = BOTON_ESTADO;
         if (xTaskCreate(tarea_tecla, "boton1", 1024, key_args, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear boton1 ");
-    
-        key_args = malloc(3 * sizeof(key_task_t));
+
+        key_args = malloc(sizeof(key_task));
         key_args->event_group = event_group;
         key_args->gpio_id = BOTON2;
         key_args->event_bit = BOTON_BORRAR;
         if (xTaskCreate(tarea_tecla, "boton2", 1024, key_args, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear boton2");
 
-        key_args = malloc(3 * sizeof(key_task_t));
+        key_args = malloc(sizeof(key_task));
         key_args->event_group = event_group;
         key_args->gpio_id = BOTON3;
         key_args->event_bit = BOTON_PARCIAL;
         if (xTaskCreate(tarea_tecla, "boton3", 1024, key_args, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear boton3 ");
 
-        leds_args = malloc(5 * sizeof(led_task_t));
+        leds_args = malloc(sizeof(led_task));
         leds_args->event_group = event_group;
         leds_args->mask_red = RED;
         leds_args->mask_verde = BLINK;
@@ -352,10 +282,13 @@ void app_main(void)
         if (xTaskCreate(borrar, "borrar", 1024, event_group, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear borrado ");
 
-        if (xTaskCreate(tomar_parcial, "parcial", 2*1024, event_group, tskIDLE_PRIORITY, NULL) != pdPASS)
+        if (xTaskCreate(tomar_parcial, "parcial", 2 * 1024, event_group, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear parcial ");
 
-        if (xTaskCreate(contar_decima, "contar", 2 * 1024, event_group, tskIDLE_PRIORITY + 3, NULL) != pdPASS)
+        crono_args = malloc(sizeof(CronoParams));
+        crono_args->time = malloc(sizeof(time_struct));
+        crono_args->event_group = event_group;
+        if (xTaskCreate(contar_decima, "contar", 3 * 1024, crono_args, tskIDLE_PRIORITY + 3, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear contar");
 
         if (xTaskCreate(dibujar_pantalla, "pantalla", 2048, event_group, tskIDLE_PRIORITY + 2, NULL) != pdPASS)
@@ -363,7 +296,6 @@ void app_main(void)
     }
     else
         ESP_LOGE(TAG, "Fallo al crear Eventos ");
-
 }
 
 /* === End of documentation ========================================================================================= */
