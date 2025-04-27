@@ -165,11 +165,11 @@ void dibujar_pantalla(void *args)
 
     panel_t segundos = CrearPanel(5, 15, 3, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
     panel_t decimas = CrearPanel(188, 15, 1, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t parcial1 = CrearPanel(80, 120, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t parcial2 = CrearPanel(80, 180, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t parcial1 = CrearPanel(15, 120, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t parcial2 = CrearPanel(47, 180, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
     panel_t parcial3 = CrearPanel(80, 240, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t parcial1_d = CrearPanel(188, 120, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t parcial2_d = CrearPanel(188, 180, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t parcial1_d = CrearPanel(123, 120, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t parcial2_d = CrearPanel(155, 180, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
     panel_t parcial3_d = CrearPanel(188, 240, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
 
     time_struct parcial[3] = {
@@ -190,12 +190,12 @@ void dibujar_pantalla(void *args)
     DibujarDigito(segundos, 0, 0);
     DibujarDigito(decimas, 0, 0);
     ILI9341DrawFilledCircle(178, 95, 5, DIGITO_ENCENDIDO);
-    ILI9341DrawFilledCircle(178, 160, 5, DIGITO_ENCENDIDO);
-    ILI9341DrawFilledCircle(178, 220, 5, DIGITO_ENCENDIDO);
+    ILI9341DrawFilledCircle(113, 160, 5, DIGITO_ENCENDIDO);
+    ILI9341DrawFilledCircle(145, 220, 5, DIGITO_ENCENDIDO);
     ILI9341DrawFilledCircle(178, 280, 5, DIGITO_ENCENDIDO);
-    //   DIBUJAR_PARCIAL(parcial1, 0, 0, 0, 0);
-    //   DIBUJAR_PARCIAL(parcial2, 0, 0, 0, 0);
-    //   DIBUJAR_PARCIAL(parcial3, 0, 0, 0, 0);
+       DIBUJAR_PARCIAL(parcial1, 0, 0, 0, 0);
+       DIBUJAR_PARCIAL(parcial2, 0, 0, 0, 0);
+       DIBUJAR_PARCIAL(parcial3, 0, 0, 0, 0);
     while (1)
     {
         EventBits_t wBits = xEventGroupWaitBits(_event_group, TOMAR_PARCIAL, pdFALSE, pdFALSE, (TickType_t)0);
@@ -220,7 +220,7 @@ void dibujar_pantalla(void *args)
 
             if ((wBits & TOMAR_PARCIAL) != 0)
             {
-                ESP_LOGI(TAG, "guardados %d \n", guardados);
+              //  ESP_LOGI(TAG, "guardados %d \n", guardados);
                 guardados < 3 ? guardados++ : guardados;
                 int i;
                 for (i = guardados; i > 1; i--)
