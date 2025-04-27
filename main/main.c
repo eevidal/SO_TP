@@ -43,7 +43,7 @@ SPDX-License-Identifier: MIT
 
 #define BOTON1 GPIO_NUM_13
 #define BOTON2 GPIO_NUM_32
-#define BOTON3 GPIO_NUM_14
+#define BOTON3 GPIO_NUM_35
 
 #define BOTON_ESTADO 1 << 0
 #define BOTON_BORRAR 1 << 1
@@ -289,6 +289,18 @@ void borrar(void *args)
     }
 }
 
+void tomar_parcial(void *args)
+{
+    EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
+    while (1)
+    {
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_PARCIAL | CUENTA, pdFALSE, pdTRUE, portMAX_DELAY));
+        {
+             ESP_LOGI(TAG, "Estado de los bits en tomar_parcial: %lu", wBits);
+        }
+    }
+}
+
 void app_main(void)
 {
     EventGroupHandle_t event_group;
@@ -339,6 +351,9 @@ void app_main(void)
 
         if (xTaskCreate(borrar, "borrar", 1024, event_group, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear borrado ");
+
+        if (xTaskCreate(tomar_parcial, "parcial", 2*1024, event_group, tskIDLE_PRIORITY, NULL) != pdPASS)
+            ESP_LOGE(TAG, "Fallo al crear parcial ");
 
         if (xTaskCreate(contar_decima, "contar", 2 * 1024, event_group, tskIDLE_PRIORITY + 3, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear contar");
