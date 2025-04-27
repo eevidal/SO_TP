@@ -9,15 +9,8 @@ void time_cero(time_struct_t timer)
     timer->centena = 0;
 }
 
-void time_tick(time_struct_t timer)
-{
-    timer->decima++;
-    if (timer->decima == 9)
-    {
-        timer->decima = 0;
-        time_incrementar_segundo(timer, UNIDAD);
-    }
-};
+
+
 
 void time_incrementar_segundo(time_struct_t timer, digito_t digito_inicial)
 {
@@ -73,3 +66,12 @@ void time_incrementar_segundo(time_struct_t timer, digito_t digito_inicial)
     }
 }
 
+void time_tick(time_struct_t timer)
+{
+    timer->decima++;
+    if (timer->decima == 9)
+    {
+        timer->decima = 0;
+        time_incrementar_segundo(timer, UNIDAD);
+    }
+};

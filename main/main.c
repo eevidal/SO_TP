@@ -52,19 +52,38 @@ SPDX-License-Identifier: MIT
 #define BLINK 1 << 3
 #define RED 1 << 4
 #define CUENTA 1 << 5
-#define REFRESCO_PANTALLA 1 << 6
-#define RESET 1 << 7
-#define EN_PAUSA 1 << 8
-#define PARCIAL 1 << 9
+//#define REFRESCO_PANTALLA 1 << 6
+#define RESET 1 << 6
+#define EN_PAUSA 1 << 7
+#define PARCIAL 1 << 8
+
+
+#define QUEUE_LENGTH    10
+#define QUEUE_LENGTH_P    3
+#define ITEM_SIZE       sizeof(time_struct)
+
+static StaticQueue_t xDisplayQueue;
+static StaticQueue_t xDisplayQueue_p;
 /* === Private data type declarations =============================================================================== */
 
-typedef struct CronoParams
+typedef struct crono_task
 {
     time_struct_t time;
     EventGroupHandle_t event_group;
-} CronoParams;
+    QueueHandle_t handler_time;
+    QueueHandle_t handler_time_p;
+} crono_task;
 
-typedef struct CronoParams *CronoParams_t;
+typedef struct crono_task *crono_task_t;
+
+typedef struct display_task
+{
+    QueueHandle_t p;  //
+    QueueHandle_t t;
+    EventGroupHandle_t event_group; 
+} display_task;
+
+typedef struct display_task *display_task_t;
 
 /* === Private variable declarations ================================================================================ */
 
@@ -75,17 +94,20 @@ static const char *TAG = "app_main";
 
 void contar_decima(void *args)
 {
-    CronoParams_t cronometro_p = (CronoParams_t)args;
+    crono_task_t cronometro_p = (crono_task_t)args;
     EventGroupHandle_t _event_group = cronometro_p->event_group;
+    QueueHandle_t qHandle = cronometro_p->handler_time;
+    QueueHandle_t qHandle_p = cronometro_p->handler_time;
     TickType_t lastEvent;
     time_struct_t cronometro = cronometro_p->time;
+    time_struct buffer;
     time_cero(cronometro);
     lastEvent = xTaskGetTickCount();
 
     while (1)
     {
         EventBits_t wBits = xEventGroupWaitBits(_event_group, CUENTA | RESET | EN_PAUSA, pdFALSE, pdFALSE, portMAX_DELAY);
-        // ESP_LOGI(TAG, "Estado de los bits en contar_decima: %lu", wBits);
+      //  ESP_LOGI(TAG, "Estado de los bits en contar_decima: %lu", wBits);
         if ((wBits & CUENTA) != 0)
         {
             // al volver de la pausa, reinicio el lastEvent
@@ -95,20 +117,23 @@ void contar_decima(void *args)
                 lastEvent = xTaskGetTickCount();
             }
             // ESP_LOGI(TAG, "CUENTA activado - Tick actual: %lu, Last Event: %lu", xTaskGetTickCount(), lastEvent);
+            ESP_LOGI(TAG, "time: %d %d %d.%d", cronometro->centena,
+                                        cronometro->decena,cronometro->unidad,
+                                        cronometro->decima
+                                );
             time_tick(cronometro);
-            xEventGroupSetBits(_event_group, REFRESCO_PANTALLA);
-            // ESP_LOGI(TAG, "Bit REFRESCO_PANTALLA activado");
+            xQueueSend(qHandle,cronometro,portMAX_DELAY);
         }
         if ((wBits & RESET) != 0)
         {
             time_cero(cronometro);
             xEventGroupClearBits(_event_group, RESET);
-            xEventGroupSetBits(_event_group, REFRESCO_PANTALLA);
+            xQueueSend(qHandle,cronometro,portMAX_DELAY);
         }
         if ((wBits & PARCIAL) != 0)
         {
             xEventGroupClearBits(_event_group, PARCIAL);
-            // encolar cuenta
+            xQueueSend(qHandle_p,cronometro,portMAX_DELAY);
         }
         vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(100));
     }
@@ -116,14 +141,18 @@ void contar_decima(void *args)
 
 void dibujar_pantalla(void *args)
 {
-    EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
+    display_task_t display_arg = (display_task_t)args;
+   // EventGroupHandle_t _event_group = display_arg->event_group;
+    QueueHandle_t queue_t = display_arg->t;
+    QueueHandle_t queue_parcial = display_arg->p;
+
     ILI9341Init();
     ILI9341Rotate(ILI9341_Landscape_1);
 
     panel_t segundos = CrearPanel(30, 60, 3, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
     panel_t decimas = CrearPanel(230, 60, 1, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    time_struct_t parcial[3];
-    time_struct_t tiempo;
+    time_struct parcial[3];
+    time_struct tiempo;
     int unidad_ant = 0;
     int decena_ant = 0;
     int centena_ant = 0;
@@ -139,11 +168,20 @@ void dibujar_pantalla(void *args)
     ILI9341DrawFilledCircle(220, 150, 5, DIGITO_ENCENDIDO);
     while (1)
     {
-        if (xEventGroupWaitBits(_event_group, REFRESCO_PANTALLA, pdTRUE, pdFALSE, portMAX_DELAY))
+        //if (xEventGroupWaitBits(_event_group, REFRESCO_PANTALLA, pdTRUE, pdFALSE, portMAX_DELAY))
+      //  xQueueReceive(queue_t,&tiempo,portMAX_DELAY);
+        if( xQueueReceive(queue_t,
+                           &( tiempo ),
+                           ( TickType_t ) 50 ) == pdPASS )
         {
-            /*   unidad_act = unidad;
-               decena_act = decena;
-               centena_act = centena;*/
+                        ESP_LOGI(TAG, "time: %d %d %d.%d", tiempo.centena,
+                                        tiempo.decena,tiempo.unidad,
+                                        tiempo.decima
+                                );
+            unidad_act = tiempo.unidad;
+            decena_act = tiempo.decena;
+            centena_act = tiempo.centena;
+            decima_act = tiempo.decima;
             //   ESP_LOGI(TAG, "Valores en dibujar_pantalla: %d, %d, %d, %d", unidad_act, decena_act, centena_act, decima);
         }
         if (unidad_act != unidad_ant)
@@ -152,17 +190,13 @@ void dibujar_pantalla(void *args)
             DibujarDigito(segundos, 1, decena_act);
         if (centena_act != centena_ant)
             DibujarDigito(segundos, 0, centena_act);
+        if (decima_act != decima_ant)
+            DibujarDigito(decimas, 0, decima_act);
+        decima_ant = decima_act;
         unidad_ant = unidad_act;
         decena_ant = decena_act;
         centena_ant = centena_act;
 
-        ILI9341DrawFilledCircle(220, 150, 5, DIGITO_ENCENDIDO);
-        {
-            //     decima_act = decima;
-        }
-        if (decima_act != decima_ant)
-            DibujarDigito(decimas, 0, decima_act);
-        decima_ant = decima_act;
     }
 }
 
@@ -232,15 +266,25 @@ void tomar_parcial(void *args)
 
 void app_main(void)
 {
-    EventGroupHandle_t event_group;
     key_task_t key_args;
     led_task_t leds_args;
-    CronoParams_t crono_args;
-
-    event_group = xEventGroupCreate();
-
+    crono_task_t crono_args; 
+    display_task_t display_args;
+    EventGroupHandle_t event_group = xEventGroupCreate();
+    uint8_t buffer_display[ QUEUE_LENGTH * ITEM_SIZE ];
+    uint8_t buffer_parciales[ QUEUE_LENGTH_P * ITEM_SIZE ];
+    QueueHandle_t q_pantalla = xQueueCreateStatic(QUEUE_LENGTH,
+                                                 ITEM_SIZE,
+                                                 buffer_display,
+                                                 &xDisplayQueue);
+    QueueHandle_t q_parciales = xQueueCreateStatic(QUEUE_LENGTH_P,
+                                                ITEM_SIZE, 
+                                                buffer_parciales,
+                                                &xDisplayQueue_p);
+    //eventos del estado inicial
     xEventGroupSetBits(event_group, RED);
     xEventGroupSetBits(event_group, EN_PAUSA);
+
 
     if (event_group)
     {
@@ -285,13 +329,19 @@ void app_main(void)
         if (xTaskCreate(tomar_parcial, "parcial", 2 * 1024, event_group, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear parcial ");
 
-        crono_args = malloc(sizeof(CronoParams));
+        crono_args = malloc(sizeof(crono_task));
         crono_args->time = malloc(sizeof(time_struct));
         crono_args->event_group = event_group;
+        crono_args->handler_time = q_pantalla;
+        crono_args->handler_time_p = q_parciales;
         if (xTaskCreate(contar_decima, "contar", 3 * 1024, crono_args, tskIDLE_PRIORITY + 3, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear contar");
 
-        if (xTaskCreate(dibujar_pantalla, "pantalla", 2048, event_group, tskIDLE_PRIORITY + 2, NULL) != pdPASS)
+        display_args = malloc(sizeof(display_task));
+        display_args->t = q_pantalla;
+        display_args->p = q_parciales;
+        display_args->event_group = event_group; 
+        if (xTaskCreate(dibujar_pantalla, "pantalla", 5*1024, display_args, tskIDLE_PRIORITY + 2, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear pantalla");
     }
     else

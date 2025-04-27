@@ -21,5 +21,8 @@ void time_cero(time_struct_t timer);
 
 void time_tick(time_struct_t timer);
 
+void time_incrementar_segundo(time_struct_t timer, digito_t digito_inicial);
+
+
 
 #endif
