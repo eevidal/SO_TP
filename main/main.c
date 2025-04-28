@@ -193,12 +193,12 @@ void dibujar_pantalla(void *args)
     ILI9341DrawFilledCircle(113, 160, 5, DIGITO_ENCENDIDO);
     ILI9341DrawFilledCircle(145, 220, 5, DIGITO_ENCENDIDO);
     ILI9341DrawFilledCircle(178, 280, 5, DIGITO_ENCENDIDO);
-       DIBUJAR_PARCIAL(parcial1, 0, 0, 0, 0);
-       DIBUJAR_PARCIAL(parcial2, 0, 0, 0, 0);
-       DIBUJAR_PARCIAL(parcial3, 0, 0, 0, 0);
+    DIBUJAR_PARCIAL(parcial1, 0, 0, 0, 0);
+    DIBUJAR_PARCIAL(parcial2, 0, 0, 0, 0);
+    DIBUJAR_PARCIAL(parcial3, 0, 0, 0, 0);
     while (1)
     {
-        EventBits_t wBits = xEventGroupWaitBits(_event_group, TOMAR_PARCIAL, pdFALSE, pdFALSE, (TickType_t)0);
+        EventBits_t wBits = xEventGroupWaitBits(_event_group, TOMAR_PARCIAL | RESET, pdFALSE, pdFALSE, (TickType_t)0);
         //  xQueueReceive(queue_t,&tiempo,portMAX_DELAY);
         if (xQueueReceive(queue_t, &(tiempo), (TickType_t)50) == pdPASS)
         {
@@ -220,7 +220,7 @@ void dibujar_pantalla(void *args)
 
             if ((wBits & TOMAR_PARCIAL) != 0)
             {
-              //  ESP_LOGI(TAG, "guardados %d \n", guardados);
+                //  ESP_LOGI(TAG, "guardados %d \n", guardados);
                 guardados < 3 ? guardados++ : guardados;
                 int i;
                 for (i = guardados; i > 1; i--)
@@ -242,6 +242,13 @@ void dibujar_pantalla(void *args)
                 DIBUJAR_PARCIAL(parcial3, parcial[2].centena,
                                 parcial[2].decena,
                                 parcial[2].unidad, parcial[2].decima);
+            }
+            if ((wBits & RESET) != 0)
+            {
+                xEventGroupClearBits(_even_group, RESET);
+                DIBUJAR_PARCIAL(parcial1, 0, 0, 0, 0);
+                DIBUJAR_PARCIAL(parcial2, 0, 0, 0, 0);
+                DIBUJAR_PARCIAL(parcial3, 0, 0, 0, 0);
             }
         }
     }
