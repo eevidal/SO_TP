@@ -30,6 +30,7 @@ SPDX-License-Identifier: MIT
 #include "leds.h"
 #include "time_struct.h"
 #include "string.h"
+#include "mode_op.h"
 /* === Macros definitions =========================================================================================== */
 
 #define LED_ROJO GPIO_NUM_26
@@ -38,16 +39,24 @@ SPDX-License-Identifier: MIT
 #define BOTON1 GPIO_NUM_13
 #define BOTON2 GPIO_NUM_32
 #define BOTON3 GPIO_NUM_35
+#define BOTON4 GPIO_NUM_34
 
 #define BOTON_ESTADO 1 << 0
 #define BOTON_BORRAR 1 << 1
 #define BOTON_PARCIAL 1 << 2
+
+#define BOTON_1 1 << 0
+#define BOTON_2 1 << 1
+#define BOTON_3 1 << 2
+
 #define BLINK 1 << 3
 #define RED 1 << 4
 #define CUENTA 1 << 5
 #define RESET 1 << 6
 #define TOMAR_PARCIAL 1 << 7
 #define EN_PAUSA 1 << 8
+
+#define BOTON_MODO 1 << 9
 
 #define QUEUE_LENGTH 10
 #define ITEM_SIZE sizeof(time_struct)
@@ -65,11 +74,29 @@ typedef struct crono_task
 
 typedef struct crono_task *crono_task_t;
 
+typedef struct clock_task
+{
+    time_clock_t time;
+    EventGroupHandle_t event_group;
+    QueueHandle_t handler_time;
+} clock_task;
+
+typedef struct clock_task *clock_task_t;
+
+typedef struct alarm_task
+{
+    time_struct_t time;
+    EventGroupHandle_t event_group;
+    QueueHandle_t handler_time;
+} alarm_task;
+
+typedef struct alarm_task *alarm_task_t;
 
 /* === Private variable declarations ================================================================================ */
 
 static const char *TAG = "app_main";
 
+modos_t modo = 0;
 /* === Public function implementation =============================================================================== */
 
 void contar_decima(void *args)
@@ -84,8 +111,10 @@ void contar_decima(void *args)
 
     while (1)
     {
-        EventBits_t wBits = xEventGroupWaitBits(_event_group, CUENTA | RESET | EN_PAUSA, pdFALSE, pdFALSE, portMAX_DELAY);
+        // desición de diseño: esto es independiente del modo
+        EventBits_t wBits = xEventGroupWaitBits(_event_group, MODOS | CUENTA | RESET | EN_PAUSA, pdFALSE, pdFALSE, portMAX_DELAY);
         //  ESP_LOGI(TAG, "Estado de los bits en contar_decima: %lu", wBits);
+
         if ((wBits & CUENTA) != 0)
         {
             // al volver de la pausa, reinicio el lastEvent
@@ -107,71 +136,210 @@ void contar_decima(void *args)
             time_cero(cronometro);
             xQueueSend(qHandle, cronometro, portMAX_DELAY);
         }
+
         vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(100));
     }
 }
+void contar_segundos(void *args)
+{
+    clock_task_t clock_p = (clock_task_t)args;
+    TickType_t lastEvent;
+    time_clock_t clock = clock_p->time;
+    lastEvent = xTaskGetTickCount();
+    while (1)
+    {
+        // el tiempo pasa siempre excepto cuando estoy configurando el reloj
+        EventBits_t wBits = xEventGroupWaitBits(_event_group, MODOS, pdFALSE, pdFALSE, portMAX_DELAY);
+        switch (wBits & MODOS)
+        {
+        case MODO_CLOCK_CONF:
+            /* code */
+            break;
+        case MODO_CRONO:
+            time_tick(clock);
+            break;
+        case MODO_ALARM:
+            time_tick(clock);
+            break;
 
+        default:
+            time_tick(clock);
+            xQueueSend(qHandle, clock, portMAX_DELAY); // MODO CLOCK, envío el tiempo a la pantalla
 
-void cambia_estado(void *args)
+            break;
+        }
+        vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(1000)); // cuenta segundos
+    }
+}
+// void cambia_estado(void *args)
+void tarea_b1(void *args)
 {
     EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
     while (1)
     {
-        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_ESTADO | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group, MODOS | BOTON_1 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
         {
-            // ESP_LOGI(TAG, "Estado de los bits en cambia_estado: %lu", wBits);
-            if (((wBits & CUENTA) != 0) && ((wBits & BOTON_ESTADO) != 0))
+            switch (wBits & MODOS)
             {
-                xEventGroupClearBits(_event_group, CUENTA);
-                xEventGroupClearBits(_event_group, BOTON_ESTADO);
-                xEventGroupClearBits(_event_group, BOTON_BORRAR);
-                xEventGroupClearBits(_event_group, BLINK);
-                xEventGroupSetBits(_event_group, EN_PAUSA);
-                xEventGroupSetBits(_event_group, RED);
-            }
-            else if ((wBits & BOTON_ESTADO) != 0)
-            {
-                xEventGroupSetBits(_event_group, BLINK);
-                xEventGroupSetBits(_event_group, CUENTA);
-                xEventGroupClearBits(_event_group, BOTON_ESTADO);
-                xEventGroupClearBits(_event_group, RED);
-                xEventGroupClearBits(_event_group, BOTON_BORRAR);
+            case MODO_CLOCK_CONF:
+                if ((wBits & BOTON1) != 0)
+                {
+                    cambiar_campo();
+                    xEventGroupClearBits(_event_group, BOTON_1);
+                }
+                break;
 
-                vTaskDelay(pdMS_TO_TICKS(20));
+            case MODO_ALARM:
+                if ((wBits & BOTON1) != 0)
+                {
+                    cambiar_campo();
+                    xEventGroupClearBits(_event_group, BOTON_1);
+                }
+                break;
+            case MODO_CRONO:
+                // ESP_LOGI(TAG, "Estado de los bits en cambia_estado: %lu", wBits);
+                if (((wBits & CUENTA) != 0) && ((wBits & BOTON_ESTADO) != 0))
+                {
+                    xEventGroupClearBits(_event_group, CUENTA);
+                    xEventGroupClearBits(_event_group, BOTON_ESTADO);
+                    xEventGroupClearBits(_event_group, BOTON_BORRAR);
+                    xEventGroupClearBits(_event_group, BLINK);
+                    xEventGroupSetBits(_event_group, EN_PAUSA);
+                    xEventGroupSetBits(_event_group, RED);
+                }
+                else if ((wBits & BOTON_ESTADO) != 0)
+                {
+                    xEventGroupSetBits(_event_group, BLINK);
+                    xEventGroupSetBits(_event_group, CUENTA);
+                    xEventGroupClearBits(_event_group, BOTON_ESTADO);
+                    xEventGroupClearBits(_event_group, RED);
+                    xEventGroupClearBits(_event_group, BOTON_BORRAR);
+
+                    vTaskDelay(pdMS_TO_TICKS(20));
+                }
+                break;
+            default:
+                break;
             }
         }
     }
 }
 
-void borrar(void *args)
+// void borrar(void *args)
+void tarea_b2(void *args)
 {
     EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
+
     while (1)
     {
-        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_BORRAR | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
+
+        // borrar en modo cronometro
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group, MODOS | BOTON_2 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
         {
-            if ((wBits & CUENTA) != 0)
+            switch (wBits & MODOS)
             {
-                continue;
-            }
-            else if ((wBits & BOTON_BORRAR) != 0) // solo borrar si la cuenta está detenida
-            {
-                xEventGroupClearBits(_event_group, BOTON_BORRAR);
-                xEventGroupSetBits(_event_group, RESET);
+            case MODO_CLOCK_CONF:
+                if ((wBits & BOTON2) != 0)
+                {
+                    decrementar_campo();
+                    xEventGroupClearBits(_event_group, BOTON_2);
+                }
+                break;
+
+            case MODO_ALARM:
+                if ((wBits & BOTON2) != 0)
+                {
+                    decrementar_campo();
+                    xEventGroupClearBits(_event_group, BOTON_2);
+                }
+                break;
+            case MODO_CRONO:
+                if ((wBits & CUENTA) != 0)
+                {
+                    continue;
+                }
+                else if ((wBits & BOTON_BORRAR) != 0) // solo borrar si la cuenta está detenida
+                {
+                    xEventGroupClearBits(_event_group, BOTON_BORRAR);
+                    xEventGroupSetBits(_event_group, RESET);
+                }
+                break;
+                default break;
             }
         }
     }
 }
 
-void tomar_parcial(void *args)
+// void tomar_parcial(void *args)
+void tarea_b3(void *args)
 {
     EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
     while (1)
     {
-        if (xEventGroupWaitBits(_event_group, BOTON_PARCIAL | CUENTA, pdFALSE, pdTRUE, portMAX_DELAY))
+        if (xEventGroupWaitBits(_event_group, MODOS | BOTON_3 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY))
+            switch (expression)
+            {
+            case MODO_CLOCK_CONF:
+                if ((wBits & BOTON3) != 0)
+                {
+                    incrementar_campo();
+                    xEventGroupClearBits(_event_group, BOTON_3);
+                }
+
+                break;
+            case MODO_ALARM:
+                if ((wBits & BOTON3) != 0)
+                {
+                    incrementar_campo();
+                    xEventGroupClearBits(_event_group, BOTON_3);
+                }
+                break;
+            case MODO_CRONO:
+                if ((wBits & CUENTA) & (wBits & BOTON_PARCIAL))
+                {
+                    xEventGroupSetBits(_event_group, TOMAR_PARCIAL);
+                    xEventGroupClearBits(_event_group, BOTON_PARCIAL);
+                }
+            default:
+                break;
+            }
+    }
+}
+
+/* */
+void cambia_modo(void *args)
+{
+    EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
+    while (1)
+    {
+        if (xEventGroupWaitBits(_event_group, BOTON_MODO, pdFALSE, pdTRUE, portMAX_DELAY))
         {
-            xEventGroupSetBits(_event_group, TOMAR_PARCIAL);
-            xEventGroupClearBits(_event_group, BOTON_PARCIAL);
+            modo = (modo + 1) % 2;
+            switch (modo)
+            {
+            case CLOCK:
+                xEventGroupClearBits(_event_group, MODO_CRONO);
+                xEventGroupSetBits(_event_group, MODO_CLOCK);
+                xEventGroupClearBits(_event_group, BOTON_MODO);
+                break;
+
+            case CLOCK_CONF:
+                xEventGroupClearBits(_event_group, MODO_CLOCK);
+                xEventGroupSetBits(_event_group, MODO_CLOCK_CONF);
+                xEventGroupClearBits(_event_group, BOTON_MODO);
+                break;
+
+            case ALARM
+            xEventGroupClearBits(_event_group, MODO_CLOCK_CONF);
+                xEventGroupSetBits(_event_group, MODO_ALARM);
+                xEventGroupClearBits(_event_group, BOTON_MODO);
+                break;
+                default: // CRONO
+                xEventGroupClearBits(_event_group, MODO_ALARM);
+                xEventGroupSetBits(_event_group, MODO_CRONO);
+                xEventGroupClearBits(_event_group, BOTON_MODO);
+                break;
+            }
         }
     }
 }

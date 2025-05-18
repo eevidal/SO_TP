@@ -8,6 +8,7 @@ void tarea_tecla(void * args){
     level = gpio_get_level(parametros->gpio_id);
 
     while(1){
+     
 
      while (level == 1)
         {

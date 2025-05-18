@@ -9,9 +9,6 @@ void time_cero(time_struct_t timer)
     timer->centena = 0;
 }
 
-
-
-
 void time_incrementar_segundo(time_struct_t timer, digito_t digito_inicial)
 {
     digito_t digito_actual = digito_inicial;
@@ -75,3 +72,58 @@ void time_tick(time_struct_t timer)
         time_incrementar_segundo(timer, UNIDAD);
     }
 };
+
+void clock_init(time_clock_t timer);
+
+void clock_set(time_clock_t timer);
+
+void clock_tick(time_clock_t timer)
+{
+    timer->sec++;
+    if (timer->sec == 60)
+    {
+        timer->sec = 0;
+        time_incrementar_minuto(timer);
+    }
+};
+
+void time_incrementar_minuto(time_clock_t timer)
+{
+    timer->min++;
+    if (timer->min == 60)
+    {
+        timer->min = 0;
+        time_incrementar_hora(timer);
+    }
+}
+
+void time_incrementar_hora(time_clock_t timer)
+{
+    timer->hr++;
+    if (timer->hr == 24)
+    {
+        timer->hr = 0;
+        time_incrementar_dia(timer);
+    }
+}
+
+void time_incrementar_dia(time_clock_t timer)
+{
+    timer->day++;
+    switch (timer->month % 2)
+    {
+    case 0: 
+        
+
+    case 1:
+        if(timer->day == 32)
+           {
+            timer->day == 1;
+            time_incrementar_mes(timer);
+           } 
+        break;
+
+    default:
+        break;
+    }
+}
