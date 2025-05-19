@@ -29,6 +29,14 @@ typedef  struct time_clock
 
 } time_clock;
 
+typedef struct clock_settings{
+    time_clock_t t;
+    int select;
+    bool set;
+} clock_settings; 
+
+typedef struct clock_settings *clock_settings_t;
+
 typedef struct time_struct *time_struct_t;
 typedef struct time_clock *time_clock_t;
 
@@ -40,8 +48,18 @@ void time_incrementar_segundo(time_struct_t timer, digito_t digito_inicial);
 
 void clock_init(time_clock_t timer);
 
-void clock_set(time_clock_t timer);
-
 void clock_tick(time_clock_t timer);
 
+void clock_incrementar_minuto(time_clock_t timer);
+
+void clock_incrementar_hora(time_clock_t timer);
+
+void clock_incrementar_dia(time_clock_t timer);
+
+void clock_incrementar_mes(time_clock_t timer);
+
+void clock_incrementar_year(time_clock_t timer);
+
+void clock_incrementar_campo(time_clock_t timer);
+void clock_decrementar_campo(time_clock_t timer);
 #endif

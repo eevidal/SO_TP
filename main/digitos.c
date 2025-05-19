@@ -205,4 +205,7 @@ void DibujarDigito(panel_t self, uint8_t posicion, uint8_t valor) {
     }
 }
 
+void ChangeColor(panel_t self, uint16_t encendido){
+    self->encendido = encendido;
+}
 /* === End of documentation ======================================================================================== */

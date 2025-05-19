@@ -23,23 +23,16 @@ void dibujar_pantalla(void *args)
     int guardados = 0;
     display_task_t display_arg = (display_task_t)args;
     EventGroupHandle_t _event_group = display_arg->event_group;
-    QueueHandle_t queue_t = display_arg->t;
+    QueueHandle_t queue_crono = display_arg->t;
+    QueueHandle_t queue_clock = display_arg->clock;
+    QueueHandle_t alarm_clock = display_arg->alarm;
+    int sel = display_arg->selected;
+    bool set_alarm = display_arg->selected;
     uint8_t reset_bits = display_arg->reset_bits;
     uint8_t parcial_bits = display_arg->parcial_bits;
     uint8_t event_bits = reset_bits | parcial_bits;
 
-    ILI9341Init();
-    ILI9341Rotate(ILI9341_Portrait_2);
-
-    panel_t segundos = CrearPanel(5, 15, 3, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t decimas = CrearPanel(188, 15, 1, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t parcial1 = CrearPanel(15, 120, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t parcial2 = CrearPanel(47, 180, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t parcial3 = CrearPanel(80, 240, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t parcial1_d = CrearPanel(123, 120, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t parcial2_d = CrearPanel(155, 180, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t parcial3_d = CrearPanel(188, 240, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-
+    /*Estructura y variables para el cronometro*/
     time_struct parcial[3] = {
         {0, 0, 0, 0},
         {0, 0, 0, 0},
@@ -54,6 +47,34 @@ void dibujar_pantalla(void *args)
     int decima_ant = 0;
     int decima_act = 0;
 
+    /*Estructura para guardar un reloj y alarma*/ 
+    /* clock[0] = reloj, clock[1] = alarma*/
+     time_clock  _clock[2] = {
+        {0,0,0,0,0,0},
+        {0,0,0,0,0,0}};   
+
+    ILI9341Init();
+    ILI9341Rotate(ILI9341_Portrait_2);
+
+    /*Paneles para el cronómetro*/
+    panel_t segundos = CrearPanel(5, 15, 3, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t decimas = CrearPanel(188, 15, 1, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t parcial1 = CrearPanel(15, 120, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t parcial2 = CrearPanel(47, 180, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t parcial3 = CrearPanel(80, 240, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t parcial1_d = CrearPanel(123, 120, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t parcial2_d = CrearPanel(155, 180, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t parcial3_d = CrearPanel(188, 240, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+
+    /*Panel para el reloj y alarma*/    
+    panel_t horas    = CrearPanel(  5, 15,  2, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t minutos  = CrearPanel( 85, 15,  2, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t segundos = CrearPanel(160, 15,  2, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t dia      = CrearPanel( 15, 120, 2, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t mes      = CrearPanel( 47, 180, 2, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t year     = CrearPanel( 80, 240, 4, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+
+
     MODE1_RESET_PANTALLA(); // crono
     while (1)
     {
@@ -61,10 +82,13 @@ void dibujar_pantalla(void *args)
         switch (wBits & MODOS)
         {
         case MODO_CLOCK:
+        if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)50) == pdPASS){}
             break;
         case MODO_CLOCK_CONF:
+        if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)50) == pdPASS){}
             break;
         case MODO_ALARM:
+        if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)50) == pdPASS){}
             break;
         case MODO_CRONO:
             if ((wBits & reset_bits) != 0)
@@ -81,7 +105,7 @@ void dibujar_pantalla(void *args)
                 parcial[1] = parcial[0];
                 parcial[2] = parcial[0];
             }
-            if (xQueueReceive(queue_t, &(tiempo), (TickType_t)50) == pdPASS)
+            if (xQueueReceive(queue_crono, &(tiempo), (TickType_t)50) == pdPASS)
             {
                 unidad_act = tiempo.unidad;
                 decena_act = tiempo.decena;
@@ -129,3 +153,6 @@ void dibujar_pantalla(void *args)
         }
     }
 }
+
+
+

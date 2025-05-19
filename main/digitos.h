@@ -38,7 +38,7 @@ extern "C" {
 
 //! @brief Cantidad máxima de paneles que se pueden crear
 #ifndef MAXIMO_PANELES
-#define MAXIMO_PANELES 8
+#define MAXIMO_PANELES 14
 #endif
 
 //! @brief Cantidad máxima de digitos que se pueden mostrar en un panel
@@ -79,6 +79,7 @@ panel_t CrearPanel(uint16_t x, uint16_t y, uint16_t digitos, uint16_t alto, uint
  * @param valor      Valor que se desea mostrar en el digito
  */
 void DibujarDigito(panel_t self, uint8_t posicion, uint8_t valor);
+void ChangeColor(panel_t self, uint16_t encendido);
 
 /* === End of documentation ======================================================================================== */
 
