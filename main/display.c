@@ -23,9 +23,9 @@ void dibujar_pantalla(void *args)
     int guardados = 0;
     display_task_t display_arg = (display_task_t)args;
     EventGroupHandle_t _event_group = display_arg->event_group;
-    QueueHandle_t queue_crono = display_arg->t;
-    QueueHandle_t queue_clock = display_arg->clock;
-    QueueHandle_t alarm_clock = display_arg->alarm;
+    QueueHandle_t queue_crono = display_arg->qcrono;
+    QueueHandle_t queue_clock = display_arg->qclock;
+    QueueHandle_t alarm_clock = display_arg->qalarm;
     int sel = display_arg->selected;
     bool set_alarm = display_arg->selected;
     uint8_t reset_bits = display_arg->reset_bits;
@@ -47,11 +47,14 @@ void dibujar_pantalla(void *args)
     int decima_ant = 0;
     int decima_act = 0;
 
-    /*Estructura para guardar un reloj y alarma*/ 
+    /*Estructura para guardar un reloj y alarma*/
     /* clock[0] = reloj, clock[1] = alarma*/
-     time_clock  _clock[2] = {
-        {0,0,0,0,0,0},
-        {0,0,0,0,0,0}};   
+    time_clock _clock[2] = {
+        {0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0}};
+    time_clock _clock_ant[2] = {
+        {0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0}};
 
     ILI9341Init();
     ILI9341Rotate(ILI9341_Portrait_2);
@@ -66,29 +69,55 @@ void dibujar_pantalla(void *args)
     panel_t parcial2_d = CrearPanel(155, 180, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
     panel_t parcial3_d = CrearPanel(188, 240, 3, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
 
-    /*Panel para el reloj y alarma*/    
-    panel_t horas    = CrearPanel(  5, 15,  2, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t minutos  = CrearPanel( 85, 15,  2, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t segundos = CrearPanel(160, 15,  2, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t dia      = CrearPanel( 15, 120, 2, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t mes      = CrearPanel( 47, 180, 2, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-    panel_t year     = CrearPanel( 80, 240, 4, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
-
+    /*Panel para el reloj y alarma*/
+    panel_t rhoras = CrearPanel(5, 15, 2, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t rminutos = CrearPanel(85, 15, 2, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t rsegundos = CrearPanel(160, 15, 2, DIGITO_ALTO, DIGITO_ANCHO, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t rdia = CrearPanel(15, 120, 2, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t rmes = CrearPanel(47, 180, 2, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t ryear = CrearPanel(80, 240, 4, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
 
     MODE1_RESET_PANTALLA(); // crono
     while (1)
     {
         EventBits_t wBits = xEventGroupWaitBits(_event_group, event_bits | MODOS, pdFALSE, pdFALSE, (TickType_t)0);
-        switch (wBits & MODOS)
+        switch (wBits & (MODOS))
         {
         case MODO_CLOCK:
-        if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)50) == pdPASS){}
+            if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)50) == pdPASS)
+            {
+                DIBUJAR_HORA(rhoras, _clock[0].hr, _clock_ant[0].hr);
+                DIBUJAR_HORA(rminutos, _clock[0].min, _clock_ant[0].min);
+                DIBUJAR_HORA(rsegundos, _clock[0].sec, _clock_ant[0].sec);
+                DIBUJAR_HORA(rdia, _clock[0].day, _clock_ant[0].day);
+                DIBUJAR_MES(rmes, _clock[0].month, _clock_ant[0].month);
+                DIBUJAR_YEAR(ryear, _clock[0].year, _clock_ant[0].year);
+                _clock_ant[0] = _clock[0];
+            }
             break;
         case MODO_CLOCK_CONF:
-        if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)50) == pdPASS){}
+            if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)50) == pdPASS)
+            {
+                DIBUJAR_HORA(rhoras, _clock[0].hr, _clock_ant[0].hr);
+                DIBUJAR_HORA(rminutos, _clock[0].min, _clock_ant[0].min);
+                DIBUJAR_HORA(rsegundos, _clock[0].sec, _clock_ant[0].sec);
+                DIBUJAR_HORA(rdia, _clock[0].day, _clock_ant[0].day);
+                DIBUJAR_MES(rmes, _clock[0].month, _clock_ant[0].month);
+                DIBUJAR_YEAR(ryear, _clock[0].year, _clock_ant[0].year);
+                 _clock_ant[0] = _clock[0];
+            }
             break;
         case MODO_ALARM:
-        if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)50) == pdPASS){}
+            if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)50) == pdPASS)
+            {
+                DIBUJAR_HORA(rhoras, _clock[1].hr, _clock_ant[1].hr);
+                DIBUJAR_HORA(rminutos, _clock[1].min, _clock_ant[1].min);
+                DIBUJAR_HORA(rsegundos, _clock[1].sec, _clock_ant[1].sec);
+                DIBUJAR_HORA(rdia, _clock[1].day, _clock_ant[1].day);
+                DIBUJAR_MES(rmes, _clock[1].month, _clock_ant[1].month);
+                DIBUJAR_YEAR(ryear, _clock[1].year, _clock_ant[1].year);
+                _clock_ant[1] = _clock[1];
+            }
             break;
         case MODO_CRONO:
             if ((wBits & reset_bits) != 0)
@@ -153,6 +182,3 @@ void dibujar_pantalla(void *args)
         }
     }
 }
-
-
-

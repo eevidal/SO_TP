@@ -7,7 +7,7 @@
 
 typedef struct key_task{
     EventGroupHandle_t event_group;
-    uint8_t event_bit;
+    uint16_t event_bit;
     gpio_num_t gpio_id;
     
 

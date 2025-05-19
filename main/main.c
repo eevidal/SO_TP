@@ -63,10 +63,6 @@ SPDX-License-Identifier: MIT
 #define QUEUE_LENGTH_C 2
 #define ITEM_SIZE sizeof(time_struct)
 
-static StaticQueue_t xDisplayQueue_crono;
-static StaticQueue_t xDisplayQueue_alarm;        // clock + campo
-static StaticQueue_t xDisplayQueue_clock;        // clock
-static StaticQueue_t xDisplayQueue_clock_config; // campo
 
 /* === Private data type declarations =============================================================================== */
 
@@ -97,7 +93,7 @@ typedef struct clock_task *clock_task_t;
 /* === Private variable declarations ================================================================================ */
 
 static const char *TAG = "app_main";
-static const char *TAG_ALARM = "dispara_alarma"
+static const char *TAG_ALARM = "dispara_alarma";
 
 
 /* === Public function implementation =============================================================================== */
@@ -148,7 +144,7 @@ void contar_segundos(void *args)
     clock_task_t clock_p = (clock_task_t)args;
     TickType_t lastEvent;
     time_clock_t clock = clock_p->clock;
-    EventGroupHandle_t _event_group = clock_p->event_group
+    EventGroupHandle_t _event_group = clock_p->event_group;
     QueueHandle_t qHandle = clock_p->handler_clock;
 
     lastEvent = xTaskGetTickCount();
@@ -156,7 +152,7 @@ void contar_segundos(void *args)
     {
         // el tiempo pasa siempre excepto cuando estoy configurando el reloj
         EventBits_t wBits = xEventGroupWaitBits(_event_group, MODOS, pdFALSE, pdFALSE, portMAX_DELAY);
-        switch (wBits & MODOS)
+        switch (wBits & (MODOS))
         {
         case MODO_CLOCK_CONF:
         case MODO_ALARM_CONF:
@@ -180,7 +176,7 @@ void contar_segundos(void *args)
 
 void cambiar_campo(int selected)
 {
-    selected = selected++;
+    selected++;
     if (selected == 6)
         selected = 0;
 }
@@ -197,7 +193,7 @@ void tarea_b1(void *args)
     {
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, MODOS | BOTON_1 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
         {
-            switch (wBits & MODOS)
+            switch (wBits & (MODOS))
             {
             case MODO_CLOCK_CONF:
             case MODO_ALARM_CONF:
@@ -243,7 +239,7 @@ void tarea_b1(void *args)
 void tarea_b2(void *args)
 {
     clock_task_t clock_p = (clock_task_t)args;
-    time_clock_t clock = clock_p->time;
+    time_clock_t clock = clock_p->clock;
     EventGroupHandle_t _event_group = clock_p->event_group;
     QueueHandle_t qHandle_clock = clock_p->handler_clock;
     QueueHandle_t qHandle_alarm = clock_p->handler_alarm;
@@ -253,13 +249,13 @@ void tarea_b2(void *args)
         // borrar en modo cronometro
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, MODOS | BOTON_2 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
         {
-            switch (wBits & MODOS)
+            switch (wBits & (MODOS))
             {
             case MODO_CLOCK_CONF:
                 if ((wBits & BOTON2) != 0)
                 {
 
-                    decrementar_campo(clock_p->clock, clock_p->selected);
+                    clock_decrementar_campo(clock_p->clock, clock_p->selected);
                     xEventGroupClearBits(_event_group, BOTON_2);
                     xQueueSend(qHandle_clock, clock, 0);
                 }
@@ -269,7 +265,7 @@ void tarea_b2(void *args)
                 if ((wBits & BOTON2) != 0)
                 {
 
-                    decrementar_campo(clock_p->alarm, clock_p->selected);
+                    clock_decrementar_campo(clock_p->alarm, clock_p->selected);
                     xEventGroupClearBits(_event_group, BOTON_2);
                     xQueueSend(qHandle_alarm, clock_p->alarm, 0);
                 }
@@ -311,7 +307,7 @@ void tarea_b2(void *args)
                     xEventGroupSetBits(_event_group, RESET);
                 }
                 break;
-                default break;
+                default: break;
             }
         }
     }
@@ -321,19 +317,19 @@ void tarea_b2(void *args)
 void tarea_b3(void *args)
 {
     clock_task_t clock_p = (clock_task_t)args;
-    time_clock_t clock = clock_p->time;
+    time_clock_t clock = clock_p->clock;
     time_clock_t alarm = clock_p->alarm;
     EventGroupHandle_t _event_group = clock_p->event_group;
-    QueueHandle_t qHandle = clock_p->q_clock;
+    QueueHandle_t qHandle = clock_p->handler_clock;
     while (1)
     {
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, MODOS | BOTON_3 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
-        switch (wBits & MODOS)
+        switch (wBits & (MODOS))
         {
         case MODO_CLOCK_CONF:
             if ((wBits & BOTON3) != 0)
             {
-                incrementar_campo(clock_p->time, clock_p->selected);
+                clock_incrementar_campo(clock_p->clock, clock_p->selected);
                 xEventGroupClearBits(_event_group, BOTON_3);
                 xQueueSend(qHandle, clock, 0);
             }
@@ -342,7 +338,7 @@ void tarea_b3(void *args)
         case MODO_ALARM_CONF:
             if ((wBits & BOTON3) != 0)
             {
-                incrementar_campo(clock_p->alarm, clock_p->selected);
+                clock_incrementar_campo(clock_p->alarm, clock_p->selected);
                 xEventGroupClearBits(_event_group, BOTON_3);
                 xQueueSend(qHandle, clock, 0);
             }
@@ -367,7 +363,7 @@ void cambia_modo(void *args)
     {
 
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, MODOS | BOTON_MODO, pdFALSE, pdFALSE, portMAX_DELAY));
-        switch (wBits & MODOS)
+        switch (wBits & (MODOS))
         {
         // Reloj ->Reloj Config ->Alarma Config-> Crónometro
         case MODO_CLOCK:
@@ -419,7 +415,7 @@ void dispara_alarma(void *args)
     time_clock_t clock = clock_p->clock;
     time_clock_t alarm = clock_p->alarm;
     EventGroupHandle_t _event_group = clock_p->event_group;
-    QueueHandle_t qHandle = clock_p->q_clock;
+    QueueHandle_t qHandle = clock_p->handler_clock;
     bool alarm_seted = clock_p->alarm_seted;
 
     TickType_t last_check = xTaskGetTickCount();
@@ -435,11 +431,11 @@ void dispara_alarma(void *args)
                 clock->min == alarm->min &&
                 clock->sec == alarm->sec &&
                 clock->day == alarm->day &&
-                clock->month == clock->month &&
-                clock->year == clock->year)
+                clock->month == alarm->month &&
+                clock->year == alarm->year)
             {
                 ESP_LOGI(TAG_ALARM, "¡ALARMA SONANDO!");
-                switch (wBits & MODOS)
+                switch (wBits & (MODOS))
                 {
                 case MODO_CLOCK:
                     xEventGroupClearBits(_event_group, MODO_CLOCK);
@@ -450,7 +446,7 @@ void dispara_alarma(void *args)
                 case MODO_CRONO:
                     xEventGroupClearBits(_event_group, MODO_CRONO);
                     clock_p->modo = CRONO;
-                case MODO_CLOCK:
+                case MODO_ALARM_CONF:
                     xEventGroupClearBits(_event_group, MODO_ALARM_CONF);
                     clock_p->modo = ALARM_CONF;
                     xEventGroupSetBits(_event_group, MODO_ALARM);
@@ -472,7 +468,6 @@ void app_main(void)
     led_task_t leds_args;
     crono_task_t crono_args;
     clock_task_t clock_args;
-    alarm_task_t alarm_args;
     display_task_t display_args;
     EventGroupHandle_t event_group = xEventGroupCreate();
 
@@ -552,12 +547,15 @@ void app_main(void)
         clock_args = malloc(sizeof(clock_task));
         clock_args->alarm_seted = false;
         clock_args->selected = 0;
-        time_clock c, a = malloc(sizeof(time_clock));
-        c = {.year = 2025, .month = 1, .day = 1, .hr = 0, .min = 0, .sec = 0}; /* reference time*/
-        clock_args->clock = &c;
-        clock_args->alarm = &a;
+        clock_args->clock = malloc(sizeof(time_clock));
+        clock_args->alarm = malloc(sizeof(time_clock));
+    
+        clock_init(clock_args->clock); /* reference time*/
+        clock_init(clock_args->alarm);
         clock_args->event_group = event_group;
-        // handler_clock, handler_alarm, handler_crono, handler_conf;
+
+        clock_args->event_group = event_group;
+        // handler_clock, handler_alarm, handler_crono, handler_conf
         clock_args->handler_clock = q_clock;
         clock_args->handler_alarm = q_alarm;
         clock_args->handler_crono = q_crono;
@@ -582,11 +580,11 @@ void app_main(void)
             ESP_LOGE(TAG, "Fallo al crear contar");
 
         display_args = malloc(sizeof(display_task));
-        display_args->crono = q_crono;
-        display_args->clock = q_clock;
-        display_args->alarm = q_alarm;
-        display_args->conf = q_clock_conf
-                                 display_args->selected = 0;
+        display_args->qcrono = q_crono;
+        display_args->qclock = q_clock;
+        display_args->qalarm = q_alarm;
+        display_args->qconf = q_clock_conf;
+        display_args->selected = 0;
         display_args->alarm_set = false;
         display_args->event_group = event_group;
         display_args->parcial_bits = TOMAR_PARCIAL;

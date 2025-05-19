@@ -10,11 +10,11 @@
 
 typedef enum modos
 {
-    CLOCK = 0,
-    CLOCK_CONF = 1,
-    ALARM = 2,
-    ALARM_CONF = 3,
-    CRONO = 4
+    CLOCK = 1 << 10,
+    CLOCK_CONF = 1 << 11,
+    ALARM = 1 << 12,
+    ALARM_CONF =1 << 13,
+    CRONO = 1 << 14
 
 
 } modos_t;

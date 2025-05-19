@@ -1,6 +1,34 @@
 #include "stdbool.h"
 #include "time_struct.h"
 #include "freertos/FreeRTOS.h"
+
+int cantidad_dias(int mes, int year)
+{
+    int days = 0;
+    switch (mes)
+    {
+    case 2: // Febrero
+        days = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) ? 29 : 28;
+        break;
+    case 4:
+    case 6:
+    case 9:
+    case 11:
+        days = 30;
+        break;
+    case 1:
+    case 3:
+    case 5:
+    case 7:
+    case 8:
+    case 10:
+    case 12:
+        days = 31;
+        break;
+    }
+    return days;
+}
+
 void time_cero(time_struct_t timer)
 {
     timer->decima = 0;
@@ -73,7 +101,15 @@ void time_tick(time_struct_t timer)
     }
 };
 
-void clock_init(time_clock_t timer);
+void clock_init(time_clock_t timer)
+{
+    timer->year = 2025;
+    timer->month = 1;
+    timer->day = 1;
+    timer->hr = 0;
+    timer->min = 0;
+    timer->sec = 0;
+}
 
 void clock_tick(time_clock_t timer)
 {
@@ -107,7 +143,7 @@ void clock_incrementar_hora(time_clock_t timer)
 
 void clock_incrementar_dia(time_clock_t timer)
 {
-    uint8_t days = cantidad_dias(timer->month);
+    uint8_t days = cantidad_dias(timer->month, timer->year);
     timer->day++;
     if (timer->day > days)
     {
@@ -232,31 +268,4 @@ void clock_decrementar_campo(time_clock_t timer, int campo)
     default:
         break;
     }
-}
-
-int cantidad_dias(int mes, int year)
-{
-    int days = 0;
-    switch (mes)
-    {
-    case 2: // Febrero
-        days = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) ? 29 : 28;
-        break;
-    case 4:
-    case 6:
-    case 9:
-    case 11:
-        days = 30;
-        break;
-    case 1:
-    case 3:
-    case 5:
-    case 7:
-    case 8:
-    case 10:
-    case 12:
-        days = 31;
-        break;
-    }
-    return days;
 }
