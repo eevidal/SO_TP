@@ -69,8 +69,6 @@ void dibujar_pantalla(void *args)
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK:
-            CLOCK_RESET_PANTALLA(); 
-            //DIBUJAR_TODO_RELOJ(_clock[0], _clock[0]);
             if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)50) == pdPASS)
             {
                 DIBUJAR_TODO_RELOJ(_clock[0], _clock_ant[0]);
@@ -100,7 +98,7 @@ void dibujar_pantalla(void *args)
             }
             break;
         case MODO_CRONO:
-            CRONO_RESET_PANTALLA(); 
+            CRONO_RESET_PANTALLA_0(); 
             if ((wBits & reset_bits) != 0)
             {
                 xEventGroupClearBits(_event_group, reset_bits);
