@@ -196,8 +196,7 @@ void clock_incrementar_campo(time_clock_t timer, int campo)
     case 4:
         timer->month++;
         if (timer->month > 12)
-            ;
-        timer->month = 1;
+            timer->month = 1;
         break;
     case 5:
         timer->year++;

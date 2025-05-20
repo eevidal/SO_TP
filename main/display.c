@@ -69,6 +69,10 @@ void dibujar_pantalla(void *args)
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK:
+            if (wBits & CAMBIO_MODO) {
+                CLOCK_RESET_PANTALLA();
+                xEventGroupClearBits(_event_group,CAMBIO_MODO);
+            }
             if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)50) == pdPASS)
             {
                 DIBUJAR_TODO_RELOJ(_clock[0], _clock_ant[0]);
@@ -91,6 +95,10 @@ void dibujar_pantalla(void *args)
             }
             break;
         case MODO_ALARM_CONF:
+            if (wBits & CAMBIO_MODO) {
+                CLOCK_RESET_PANTALLA();
+                xEventGroupClearBits(_event_group,CAMBIO_MODO);
+            }
             if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)50) == pdPASS)
             {
                 DIBUJAR_TODO_RELOJ(_clock[1], _clock_ant[1]);
@@ -98,7 +106,11 @@ void dibujar_pantalla(void *args)
             }
             break;
         case MODO_CRONO:
-            CRONO_RESET_PANTALLA_0(); 
+            if (wBits & CAMBIO_MODO) {
+                CRONO_RESET_PANTALLA();
+                xEventGroupClearBits(_event_group,CAMBIO_MODO);
+            }
+            
             if ((wBits & reset_bits) != 0)
             {
                 xEventGroupClearBits(_event_group, reset_bits);

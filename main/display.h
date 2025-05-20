@@ -14,9 +14,9 @@
 #define DIGITO_APAGADO 0x3800
 #define DIGITO_FONDO ILI9341_BLACK
 
-#define CRONO_RESET_PANTALLA_0()                                \
+#define CRONO_RESET_PANTALLA()                                \
     do                                                          \
-    {                                                           \
+    {   ILI9341Fill(DIGITO_APAGADO);                            \
         DibujarDigito(segundos, 2, 0);                          \
         DibujarDigito(segundos, 1, 0);                          \
         DibujarDigito(segundos, 0, 0);                          \
@@ -30,17 +30,9 @@
         DIBUJAR_PARCIAL(parcial3, 0, 0, 0, 0);                  \
     } while (0)
 
-#define CRONO_RESET_PANTALLA()                                  \
-    do                                                          \
-    {                                                           \
-        ILI9341Fill(DIGITO_APAGADO);                            \
-        ILI9341DrawFilledCircle(178, 95, 5, DIGITO_ENCENDIDO);  \
-        ILI9341DrawFilledCircle(113, 160, 5, DIGITO_ENCENDIDO); \
-        ILI9341DrawFilledCircle(145, 220, 5, DIGITO_ENCENDIDO); \
-        ILI9341DrawFilledCircle(178, 280, 5, DIGITO_ENCENDIDO); \
-    } while (0)
 
-#define CLOCK_RESET_PANTALLA_0()                               \
+
+#define CLOCK_RESET_PANTALLA_0(_clock)                 \
     do                                                         \
     {                                                          \
         ILI9341Fill(DIGITO_APAGADO);                           \

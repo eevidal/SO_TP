@@ -58,6 +58,7 @@ SPDX-License-Identifier: MIT
 
 #define BOTON_MODO 1 << 9
 
+
 #define QUEUE_LENGTH 10
 
 #define QUEUE_LENGTH_C 2
@@ -180,6 +181,7 @@ void cambiar_campo(int selected)
     selected++;
     if (selected == 6)
         selected = 0;
+         ESP_LOGI(TAG, "Selected: %d", selected);
 }
 void tarea_b1(void *args)
 {
@@ -201,7 +203,7 @@ void tarea_b1(void *args)
             case MODO_ALARM_CONF:
                 if ((wBits & BOTON1) != 0)
                 {
-                    cambiar_campo(clock_p->selected);
+                    clock_p->selected = (clock_p->selected + 1) % 6;
                     xEventGroupClearBits(_event_group, BOTON_1);
                     select = clock_p->selected;
                     xQueueSend(qHandle_campo, &select, 0);
@@ -249,7 +251,7 @@ void tarea_b2(void *args)
     {
 
         // borrar en modo cronometro
-        EventBits_t wBits = (xEventGroupWaitBits(_event_group, MODOS | BOTON_2 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group,  BOTON_2 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
         {
             switch (wBits & (MODOS))
             {
@@ -258,6 +260,7 @@ void tarea_b2(void *args)
                 {
 
                     clock_decrementar_campo(clock_p->clock, clock_p->selected);
+                     ESP_LOGI(TAG, "decrementa : %d", clock_p->clock->hr);
                     xEventGroupClearBits(_event_group, BOTON_2);
                     xQueueSend(qHandle_clock, clock, 0);
                 }
@@ -375,6 +378,7 @@ void cambia_modo(void *args)
                 xEventGroupClearBits(_event_group, MODO_CLOCK);
                 xEventGroupSetBits(_event_group, MODO_CLOCK_CONF);
                 xEventGroupClearBits(_event_group, BOTON_MODO);
+                xEventGRoupSetBits(_event_group,CAMBIO_MODO);
                   ESP_LOGI(TAG, "¡CAMBIA A MODO CLOCK_CONF!");
             }
             break;
@@ -385,6 +389,7 @@ void cambia_modo(void *args)
                 xEventGroupClearBits(_event_group, MODO_CLOCK_CONF);
                 xEventGroupSetBits(_event_group, MODO_ALARM_CONF);
                 xEventGroupClearBits(_event_group, BOTON_MODO);
+                 xEventGRoupSetBits(_event_group,CAMBIO_MODO);
                 ESP_LOGI(TAG, "¡CAMBIA A MODO ALARM CONF!");
             }
             break;
@@ -398,6 +403,7 @@ void cambia_modo(void *args)
                 xEventGroupClearBits(_event_group, MODO_ALARM_CONF);
                 xEventGroupSetBits(_event_group, MODO_CRONO);
                 xEventGroupClearBits(_event_group, BOTON_MODO);
+                 xEventGRoupSetBits(_event_group,CAMBIO_MODO);
                 ESP_LOGI(TAG, "¡CAMBIA A MODO CRONO!");
             }
             break;
@@ -407,6 +413,7 @@ void cambia_modo(void *args)
                 xEventGroupClearBits(_event_group, MODO_CRONO);
                 xEventGroupSetBits(_event_group, MODO_CLOCK);
                 xEventGroupClearBits(_event_group, BOTON_MODO);
+                 xEventGRoupSetBits(_event_group,CAMBIO_MODO);
                 ESP_LOGI(TAG, "¡CAMBIA A MODO CLOCK!");
             }
             break;
