@@ -6,11 +6,19 @@
 #include "ili9341.h"
 #include "digitos.h"
 
-#define DIGITO_ANCHO 30
-#define DIGITO_ALTO 60
+
+#define DIGITO_ANCHO 55
+#define DIGITO_ALTO 90
+#define DIGITO_ANCHO_A 30
+#define DIGITO_ALTO_A 60
 #define DIGITO_ANCHO_P 30
 #define DIGITO_ALTO_P 50
 #define DIGITO_ENCENDIDO ILI9341_WHITE
+#define DIGITO_ENCENDIDO_G ILI9341_GREEN  
+#define DIGITO_ENCENDIDO_R ILI9341_RED  
+#define DIGITO_ENCENDIDO_B ILI9341_BLUE
+#define DIGITO_ENCENDIDO_DG ILI9341_DARKGREY 
+
 #define DIGITO_APAGADO 0x3800
 #define DIGITO_FONDO ILI9341_BLACK
 
@@ -32,7 +40,7 @@
 
 
 
-#define CLOCK_RESET_PANTALLA_0(_clock)                 \
+#define CLOCK_RESET_PANTALLA(_clock)                 \
     do                                                         \
     {                                                          \
         ILI9341Fill(DIGITO_APAGADO);                           \
@@ -48,15 +56,7 @@
         ILI9341DrawFilledCircle(145, 35, 3, DIGITO_ENCENDIDO); \
     } while (0);
 
-#define CLOCK_RESET_PANTALLA()                                 \
-    do                                                         \
-    {                                                          \
-        ILI9341Fill(DIGITO_APAGADO);                           \
-        ILI9341DrawFilledCircle(75, 55, 3, DIGITO_ENCENDIDO);  \
-        ILI9341DrawFilledCircle(75, 35, 3, DIGITO_ENCENDIDO);  \
-        ILI9341DrawFilledCircle(150, 55, 3, DIGITO_ENCENDIDO); \
-        ILI9341DrawFilledCircle(150, 35, 3, DIGITO_ENCENDIDO); \
-    } while (0);
+
 
 #define DIBUJAR_PARCIAL(panel_base, centena, decena, unidad, decima) \
     DibujarDigito(panel_base, 2, unidad);                            \

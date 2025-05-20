@@ -378,7 +378,7 @@ void cambia_modo(void *args)
                 xEventGroupClearBits(_event_group, MODO_CLOCK);
                 xEventGroupSetBits(_event_group, MODO_CLOCK_CONF);
                 xEventGroupClearBits(_event_group, BOTON_MODO);
-                xEventGRoupSetBits(_event_group,CAMBIO_MODO);
+                xEventGroupSetBits(_event_group,CAMBIO_MODO);
                   ESP_LOGI(TAG, "¡CAMBIA A MODO CLOCK_CONF!");
             }
             break;
@@ -389,7 +389,7 @@ void cambia_modo(void *args)
                 xEventGroupClearBits(_event_group, MODO_CLOCK_CONF);
                 xEventGroupSetBits(_event_group, MODO_ALARM_CONF);
                 xEventGroupClearBits(_event_group, BOTON_MODO);
-                 xEventGRoupSetBits(_event_group,CAMBIO_MODO);
+                 xEventGroupSetBits(_event_group,CAMBIO_MODO);
                 ESP_LOGI(TAG, "¡CAMBIA A MODO ALARM CONF!");
             }
             break;
@@ -403,7 +403,7 @@ void cambia_modo(void *args)
                 xEventGroupClearBits(_event_group, MODO_ALARM_CONF);
                 xEventGroupSetBits(_event_group, MODO_CRONO);
                 xEventGroupClearBits(_event_group, BOTON_MODO);
-                 xEventGRoupSetBits(_event_group,CAMBIO_MODO);
+                 xEventGroupSetBits(_event_group,CAMBIO_MODO);
                 ESP_LOGI(TAG, "¡CAMBIA A MODO CRONO!");
             }
             break;
@@ -413,7 +413,7 @@ void cambia_modo(void *args)
                 xEventGroupClearBits(_event_group, MODO_CRONO);
                 xEventGroupSetBits(_event_group, MODO_CLOCK);
                 xEventGroupClearBits(_event_group, BOTON_MODO);
-                 xEventGRoupSetBits(_event_group,CAMBIO_MODO);
+                 xEventGroupSetBits(_event_group,CAMBIO_MODO);
                 ESP_LOGI(TAG, "¡CAMBIA A MODO CLOCK!");
             }
             break;
