@@ -2,21 +2,6 @@
 #include "time_struct.h"
 #include "mode_op.h"
 
-#define MODE1_RESET_PANTALLA()                                  \
-    do                                                          \
-    {                                                           \
-        DibujarDigito(segundos, 2, 0);                          \
-        DibujarDigito(segundos, 1, 0);                          \
-        DibujarDigito(segundos, 0, 0);                          \
-        DibujarDigito(decimas, 0, 0);                           \
-        ILI9341DrawFilledCircle(178, 95, 5, DIGITO_ENCENDIDO);  \
-        ILI9341DrawFilledCircle(113, 160, 5, DIGITO_ENCENDIDO); \
-        ILI9341DrawFilledCircle(145, 220, 5, DIGITO_ENCENDIDO); \
-        ILI9341DrawFilledCircle(178, 280, 5, DIGITO_ENCENDIDO); \
-        DIBUJAR_PARCIAL(parcial1, 0, 0, 0, 0);                  \
-        DIBUJAR_PARCIAL(parcial2, 0, 0, 0, 0);                  \
-        DIBUJAR_PARCIAL(parcial3, 0, 0, 0, 0);                  \
-    } while (0)
 
 void dibujar_pantalla(void *args)
 {
@@ -77,61 +62,45 @@ void dibujar_pantalla(void *args)
     panel_t rmes = CrearPanel(47, 180, 2, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
     panel_t ryear = CrearPanel(80, 240, 4, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO, DIGITO_APAGADO, DIGITO_FONDO);
 
-    // MODE1_RESET_PANTALLA(); // crono
+    CLOCK_RESET_PANTALLA(); // crono
     while (1)
     {
-        EventBits_t wBits = xEventGroupWaitBits(_event_group, event_bits | MODOS, pdFALSE, pdFALSE, (TickType_t)100);
+        EventBits_t wBits = xEventGroupWaitBits(_event_group, event_bits , pdFALSE, pdFALSE, (TickType_t)50);
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK:
+            CLOCK_RESET_PANTALLA(); 
+            //DIBUJAR_TODO_RELOJ(_clock[0], _clock[0]);
             if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)50) == pdPASS)
             {
-                DIBUJAR_HORA(rhoras, _clock[0].hr, _clock_ant[0].hr);
-                DIBUJAR_HORA(rminutos, _clock[0].min, _clock_ant[0].min);
-                DIBUJAR_HORA(rsegundos, _clock[0].sec, _clock_ant[0].sec);
-                DIBUJAR_HORA(rdia, _clock[0].day, _clock_ant[0].day);
-                DIBUJAR_MES(rmes, _clock[0].month, _clock_ant[0].month);
-                DIBUJAR_YEAR(ryear, _clock[0].year, _clock_ant[0].year);
+                DIBUJAR_TODO_RELOJ(_clock[0], _clock_ant[0]);
                 _clock_ant[0] = _clock[0];
             }
             break;
         case MODO_CLOCK_CONF:
+            
             if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)50) == pdPASS)
             {
-                DIBUJAR_HORA(rhoras, _clock[0].hr, _clock_ant[0].hr);
-                DIBUJAR_HORA(rminutos, _clock[0].min, _clock_ant[0].min);
-                DIBUJAR_HORA(rsegundos, _clock[0].sec, _clock_ant[0].sec);
-                DIBUJAR_HORA(rdia, _clock[0].day, _clock_ant[0].day);
-                DIBUJAR_MES(rmes, _clock[0].month, _clock_ant[0].month);
-                DIBUJAR_YEAR(ryear, _clock[0].year, _clock_ant[0].year);
                 _clock_ant[0] = _clock[0];
+                DIBUJAR_TODO_RELOJ(_clock[0], _clock_ant[0]);
             }
             break;
         case MODO_ALARM:
             if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)50) == pdPASS)
             {
-                DIBUJAR_HORA(rhoras, _clock[1].hr, _clock_ant[1].hr);
-                DIBUJAR_HORA(rminutos, _clock[1].min, _clock_ant[1].min);
-                DIBUJAR_HORA(rsegundos, _clock[1].sec, _clock_ant[1].sec);
-                DIBUJAR_HORA(rdia, _clock[1].day, _clock_ant[1].day);
-                DIBUJAR_MES(rmes, _clock[1].month, _clock_ant[1].month);
-                DIBUJAR_YEAR(ryear, _clock[1].year, _clock_ant[1].year);
+                DIBUJAR_TODO_RELOJ(_clock[1], _clock_ant[1]);
                 _clock_ant[1] = _clock[1];
             }
             break;
         case MODO_ALARM_CONF:
             if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)50) == pdPASS)
             {
-                DIBUJAR_HORA(rhoras, _clock[1].hr, _clock_ant[1].hr);
-                DIBUJAR_HORA(rminutos, _clock[1].min, _clock_ant[1].min);
-                DIBUJAR_HORA(rsegundos, _clock[1].sec, _clock_ant[1].sec);
-                DIBUJAR_HORA(rdia, _clock[1].day, _clock_ant[1].day);
-                DIBUJAR_MES(rmes, _clock[1].month, _clock_ant[1].month);
-                DIBUJAR_YEAR(ryear, _clock[1].year, _clock_ant[1].year);
+                DIBUJAR_TODO_RELOJ(_clock[1], _clock_ant[1]);
                 _clock_ant[1] = _clock[1];
             }
             break;
         case MODO_CRONO:
+            CRONO_RESET_PANTALLA(); 
             if ((wBits & reset_bits) != 0)
             {
                 xEventGroupClearBits(_event_group, reset_bits);

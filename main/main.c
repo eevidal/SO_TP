@@ -325,7 +325,7 @@ void tarea_b3(void *args)
     QueueHandle_t qHandle = clock_p->handler_clock;
     while (1)
     {
-        EventBits_t wBits = (xEventGroupWaitBits(_event_group, MODOS | BOTON_3 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_3 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK_CONF:
