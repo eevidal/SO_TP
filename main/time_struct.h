@@ -47,6 +47,7 @@ void time_tick(time_struct_t timer);
 void time_incrementar_segundo(time_struct_t timer, digito_t digito_inicial);
 
 void clock_init(time_clock_t timer);
+void clock_alarm_init(time_clock_t timer);
 
 void clock_tick(time_clock_t timer);
 
