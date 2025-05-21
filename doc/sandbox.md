@@ -21,6 +21,7 @@ En el modo Alarma: Activar o desactivar la alarma.
 Boton 3 
 En el modo Cronómetro (mientras está corriendo): Tomar un parcial.
 En el modo Reloj o Alarma (en configuración): Incrementar el valor del dígito seleccionado.
+En modo Alarma: posponer 5 min. 
 
 
 

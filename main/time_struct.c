@@ -131,6 +131,11 @@ void clock_incrementar_minuto(time_clock_t timer)
     }
 }
 
+void clock_incrementar_min(time_clock_t timer, int min){
+    for (int i =0; i < min; i++)
+        clock_incrementar_minuto(timer);
+}
+
 void clock_incrementar_hora(time_clock_t timer)
 {
     timer->hr++;

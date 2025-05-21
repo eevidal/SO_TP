@@ -60,6 +60,7 @@ void clock_incrementar_mes(time_clock_t timer);
 
 void clock_incrementar_year(time_clock_t timer);
 
+void clock_incrementar_min(time_clock_t timer, int min);
 void clock_incrementar_campo(time_clock_t timer, int campo);
 void clock_decrementar_campo(time_clock_t timer, int campo);
 

@@ -6,7 +6,6 @@
 #include "ili9341.h"
 #include "digitos.h"
 
-
 #define DIGITO_ANCHO 55
 #define DIGITO_ALTO 90
 #define DIGITO_ANCHO_A 30
@@ -14,17 +13,18 @@
 #define DIGITO_ANCHO_P 30
 #define DIGITO_ALTO_P 50
 #define DIGITO_ENCENDIDO ILI9341_WHITE
-#define DIGITO_ENCENDIDO_G ILI9341_GREEN  
-#define DIGITO_ENCENDIDO_R ILI9341_RED  
+#define DIGITO_ENCENDIDO_G ILI9341_GREEN
+#define DIGITO_ENCENDIDO_R ILI9341_RED
 #define DIGITO_ENCENDIDO_B ILI9341_BLUE
-#define DIGITO_ENCENDIDO_DG ILI9341_DARKGREY 
+#define DIGITO_ENCENDIDO_DG ILI9341_DARKGREY
 
 #define DIGITO_APAGADO 0x3800
 #define DIGITO_FONDO ILI9341_BLACK
 
-#define CRONO_RESET_PANTALLA()                                \
+#define CRONO_RESET_PANTALLA()                                  \
     do                                                          \
-    {   ILI9341Fill(DIGITO_APAGADO);                            \
+    {                                                           \
+        ILI9341Fill(DIGITO_APAGADO);                            \
         DibujarDigito(segundos, 2, 0);                          \
         DibujarDigito(segundos, 1, 0);                          \
         DibujarDigito(segundos, 0, 0);                          \
@@ -38,25 +38,21 @@
         DIBUJAR_PARCIAL(parcial3, 0, 0, 0, 0);                  \
     } while (0)
 
-
-
-#define CLOCK_RESET_PANTALLA(_clock)                 \
+#define CLOCK_RESET_PANTALLA()                           \
     do                                                         \
     {                                                          \
         ILI9341Fill(DIGITO_APAGADO);                           \
-        DIBUJAR_HORA(rhoras, 0, 0);                          \
+        DIBUJAR_HORA(rhoras, 0, 0);                            \
         DIBUJAR_HORA(rminutos, 0, 0);                          \
         DIBUJAR_HORA(rsegundos, 0, 0);                         \
         DIBUJAR_HORA(rdia, 0, 0);                              \
         DIBUJAR_MES(rmes, 0, 0);                               \
         DIBUJAR_YEAR(ryear, 0, 0);                             \
-        ILI9341DrawFilledCircle(70, 55, 3, DIGITO_ENCENDIDO);  \
-        ILI9341DrawFilledCircle(70, 35, 3, DIGITO_ENCENDIDO);  \
-        ILI9341DrawFilledCircle(145, 55, 3, DIGITO_ENCENDIDO); \
-        ILI9341DrawFilledCircle(145, 35, 3, DIGITO_ENCENDIDO); \
+        ILI9341DrawFilledCircle(75, 55, 3, DIGITO_ENCENDIDO);  \
+        ILI9341DrawFilledCircle(75, 35, 3, DIGITO_ENCENDIDO);  \
+        ILI9341DrawFilledCircle(150, 55, 3, DIGITO_ENCENDIDO); \
+        ILI9341DrawFilledCircle(150, 35, 3, DIGITO_ENCENDIDO); \
     } while (0);
-
-
 
 #define DIBUJAR_PARCIAL(panel_base, centena, decena, unidad, decima) \
     DibujarDigito(panel_base, 2, unidad);                            \
@@ -110,15 +106,15 @@
     DibujarDigito(panel_base, 1, unidad);     \
     DibujarDigito(panel_base, 0, decena);
 
-#define DIBUJAR_TODO_RELOJ(_clock_act, _clock_ant_act)               \
-    do                                                               \
-    {                                                                \
-        DIBUJAR_T(rhoras, _clock_act.hr/10, _clock_ant_act.hr%10);      \
-        DIBUJAR_HORA(rminutos, _clock_act.min, _clock_ant_act.min);  \
-        DIBUJAR_HORA(rsegundos, _clock_act.sec, _clock_ant_act.sec); \
-        DIBUJAR_HORA(rdia, _clock_act.day, _clock_ant_act.day);      \
-        DIBUJAR_MES(rmes, _clock_act.month, _clock_ant_act.month);   \
-        DIBUJAR_YEAR(ryear, _clock_act.year, _clock_ant_act.year);   \
+#define DIBUJAR_TODO_RELOJ(_clock_act, _clock_ant_act, h, m, s, d, mes, a) \
+    do                                                                     \
+    {                                                                      \
+        DIBUJAR_T(h, _clock_act.hr / 10, _clock_ant_act.hr % 10);          \
+        DIBUJAR_HORA(m, _clock_act.min, _clock_ant_act.min);               \
+        DIBUJAR_HORA(s, _clock_act.sec, _clock_ant_act.sec);               \
+        DIBUJAR_HORA(d, _clock_act.day, _clock_ant_act.day);               \
+        DIBUJAR_MES(mes, _clock_act.month, _clock_ant_act.month);          \
+        DIBUJAR_YEAR(a, _clock_act.year, _clock_ant_act.year);             \
     } while (0)
 
 typedef struct display_task
