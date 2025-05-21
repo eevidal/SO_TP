@@ -94,6 +94,18 @@ typedef struct clock_task *clock_task_t;
 static const char *TAG = "app_main";
 static const char *TAG_ALARM = "dispara_alarma";
 
+
+int is_one(long n, int b) {
+    return (n >> b) & 1;
+}
+
+void printbin(unsigned long n) {
+    for(int b=31;b>=0;b--)
+            printf("%d", is_one(n,b));
+    printf("\n");
+}
+
+
 /* === Public function implementation =============================================================================== */
 
 void contar_decima(void *args)
@@ -197,6 +209,7 @@ void tarea_b1(void *args)
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_1 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
         {
             ESP_LOGI(TAG, "Estado de los bits en cambia_campo: %lu", wBits);
+            printbin(wBits);
             switch (wBits & (MODOS))
             {
             case MODO_CLOCK_CONF:
@@ -254,6 +267,7 @@ void tarea_b2(void *args)
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_2 | CUENTA, pdFALSE, pdFALSE,   pdMS_TO_TICKS(300000))); // 5 min
         {
             ESP_LOGI(TAG, "¡B2!");
+            printbin(wBits);
             switch (wBits & (MODOS))
             {
             case MODO_CLOCK_CONF:
@@ -333,6 +347,7 @@ void tarea_b3(void *args)
     while (1)
     {
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_3 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
+        printbin(wBits);
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK_CONF:
