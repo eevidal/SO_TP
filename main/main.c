@@ -259,7 +259,6 @@ void tarea_b2(void *args)
             case MODO_CLOCK_CONF:
                 if ((wBits & BOTON2) != 0)
                 {
-
                     clock_decrementar_campo(clock_p->clock, clock_p->selected);
                     ESP_LOGI(TAG, "decrementa : %d", clock_p->clock->hr);
                     xEventGroupClearBits(_event_group, BOTON_2);
@@ -315,6 +314,7 @@ void tarea_b2(void *args)
                 }
                 break;
             default:
+              xEventGroupClearBits(_event_group, BOTON_2);
                 break;
             }
         }
@@ -575,7 +575,7 @@ void app_main(void)
         clock_args->alarm = malloc(sizeof(time_clock));
 
         clock_init(clock_args->clock); /* reference time*/
-        clock_init(clock_args->alarm);
+        clock_alarm_init(clock_args->alarm);
         clock_args->event_group = event_group;
 
         clock_args->modo = CLOCK;

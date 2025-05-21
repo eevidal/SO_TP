@@ -73,8 +73,7 @@
 #define EXTRAER_DECENAS(n) ((n) / 10)
 #define EXTRAER_UNIDADES(n) ((n) % 10)
 
-#define DIBUJAR_YEAR(panel_base, year_ac, year_ant)                            \
-    if (year_ac != year_ant)                                                   \
+#define DIBUJAR_YEAR(panel_base, year_ac, year_ant)                            \                                                 
     {                                                                          \
         int miles = EXTRAER_MILES(year_ac);                                    \
         int centenas = EXTRAER_CENTENAS(RESTO_MILES(year_ac));                 \
@@ -106,15 +105,15 @@
     DibujarDigito(panel_base, 1, unidad);     \
     DibujarDigito(panel_base, 0, decena);
 
-#define DIBUJAR_TODO_RELOJ(_clock_act, _clock_ant_act, h, m, s, d, mes, a) \
+#define DIBUJAR_TODO_RELOJ(_clock_act, _clock_ant, h, m, s, d, mes, a) \
     do                                                                     \
     {                                                                      \
-        DIBUJAR_T(h, _clock_act.hr / 10, _clock_ant_act.hr % 10);          \
-        DIBUJAR_HORA(m, _clock_act.min, _clock_ant_act.min);               \
-        DIBUJAR_HORA(s, _clock_act.sec, _clock_ant_act.sec);               \
-        DIBUJAR_HORA(d, _clock_act.day, _clock_ant_act.day);               \
-        DIBUJAR_MES(mes, _clock_act.month, _clock_ant_act.month);          \
-        DIBUJAR_YEAR(a, _clock_act.year, _clock_ant_act.year);             \
+        DIBUJAR_T(h, _clock_act.hr / 10, _clock_ant.hr % 10);          \
+        DIBUJAR_HORA(m, _clock_act.min, _clock_ant.min);               \
+        DIBUJAR_HORA(s, _clock_act.sec, _clock_ant.sec);               \
+        DIBUJAR_HORA(d, _clock_act.day, _clock_ant.day);               \
+        DIBUJAR_MES(mes, _clock_act.month, _clock_ant.month);          \
+        DIBUJAR_YEAR(a, _clock_act.year, _clock_ant.year);             \
     } while (0)
 
 typedef struct display_task
