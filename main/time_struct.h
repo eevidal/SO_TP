@@ -8,6 +8,13 @@ typedef enum
     CENTENA = 2
 } digito_t;
 
+typedef enum
+{
+    STOP = 0,
+    CORRIENDO = 1,
+    PAUSA = 2
+} crono_estado_t;
+
 // tiempo en segundos
 typedef struct time_struct
 {

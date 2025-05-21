@@ -71,6 +71,7 @@ typedef struct crono_task
 
     EventGroupHandle_t event_group;
     QueueHandle_t handler_time;
+    int estado; 
 } crono_task;
 
 typedef struct crono_task *crono_task_t;
@@ -148,11 +149,10 @@ void contar_decima(void *args)
                 break;
             case MODO_ALARM_CONF:
                 break;
-            case:
-            MODO_CRONO:
+            case MODO_CRONO:
                 xQueueSend(qHandle, cronometro, portMAX_DELAY);
                 break;
-            case default:
+            default:
                 break;
             }
         }
@@ -169,11 +169,10 @@ void contar_decima(void *args)
                 break;
             case MODO_ALARM_CONF:
                 break;
-            case:
-            MODO_CRONO:
+            case MODO_CRONO:
                 xQueueSend(qHandle, cronometro, portMAX_DELAY);
                 break;
-            case default:
+            default:
                 break;
             }
             xQueueSend(qHandle, cronometro, portMAX_DELAY);
@@ -246,10 +245,11 @@ void tarea_b1(void *args)
             {
             case MODO_CLOCK_CONF:
             case MODO_ALARM_CONF:
-                ESP_LOGI(TAG, "Estado de los bits en cambia_campo: %lu", wBits);
-                printbin(wBits);
+
                 if ((wBits & BOTON_1) != 0)
                 {
+                    ESP_LOGI(TAG, "Estado de los bits en cambia_campo: %lu", wBits);
+                    printbin(wBits);
                     clock_p->selected = (clock_p->selected + 1) % 6;
                     xEventGroupClearBits(_event_group, BOTON_1);
                     selected = clock_p->selected;
@@ -259,11 +259,11 @@ void tarea_b1(void *args)
 
             case MODO_CRONO:
                 // ESP_LOGI(TAG, "Estado de los bits en cambia_estado: %lu", wBits);
-                if (((wBits & CUENTA) != 0) && ((wBits & BOTON_ESTADO) != 0))
+                if (((wBits & CUENTA) != 0) && ((wBits & BOTON_1) != 0))
                 {
                     xEventGroupClearBits(_event_group, CUENTA);
                     xEventGroupClearBits(_event_group, BOTON_ESTADO); // BOTON_1
-                    xEventGroupClearBits(_event_group, BOTON_BORRAR);
+                    xEventGroupClearBits(_event_group, BOTON_BORRAR); //BOTON_2
                     xEventGroupClearBits(_event_group, BLINK);
                     xEventGroupSetBits(_event_group, EN_PAUSA);
                     xEventGroupSetBits(_event_group, RED);
@@ -458,7 +458,7 @@ void cambia_modo(void *args)
             break;
 
         case MODO_ALARM: // alarma sonando
-        xEventGroupClearBits(_event_group, BOTON_MODO);
+            xEventGroupClearBits(_event_group, BOTON_MODO);
             break;
         case MODO_ALARM_CONF:
             if ((wBits & BOTON_MODO) != 0)
@@ -657,6 +657,7 @@ void app_main(void)
         crono_args->time = malloc(sizeof(time_struct));
         crono_args->event_group = event_group;
         crono_args->handler_time = q_crono;
+        crono_args->estado = 0;
         if (xTaskCreate(contar_decima, "contar", 3 * 1024, crono_args, tskIDLE_PRIORITY + 3, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear contar");
 

@@ -55,7 +55,6 @@
 
 /* Podría mos cambiarla para mostrar las 3 primeras letras del mes*/
 #define DIBUJAR_MES(panel_base, mes_ac, mes_ant)        \
-    if (mes_ac != mes_ant)                              \
     {                                                   \
         DIBUJAR_T(panel_base, mes_ac / 10, mes_ac % 10) \
     }
