@@ -170,7 +170,7 @@ void dibujar_pantalla(void *args)
                 xEventGroupClearBits(_event_group, CAMBIO_MODO);
             }
 
-            if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)50) == pdPASS)
+            if (xQueueReceive(alarm_clock, &(_clock[1]), (TickType_t)50) == pdPASS)
             {
                 DIBUJAR_TODO_RELOJ(_clock[1], _clock_ant[1], rhoras, rminutos, rsegundos, rdia, rmes, ryear);
                 _clock_ant[1] = _clock[1];

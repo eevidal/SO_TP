@@ -208,8 +208,10 @@ void contar_segundos(void *args)
             break;
         case MODO_CRONO:
             break;
+        case MODO_ALARM_CONF:
+            xQueueSend(qHandle_alarm, clock, pdMS_TO_TICKS(10));    
         case MODO_ALARM:
-            xQueueSend(qHandle_alarm, clock, pdMS_TO_TICKS(10));
+            xQueueSend(qHandle, clock, pdMS_TO_TICKS(10));
             break;
         default:
             break;
