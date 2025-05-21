@@ -113,12 +113,9 @@ void clock_init(time_clock_t timer)
 
 void clock_alarm_init(time_clock_t timer)
 {
-    timer->year = 2026;
-    timer->month = 1;
-    timer->day = 1;
-    timer->hr = 0;
-    timer->min = 0;
-    timer->sec = 0;
+    clock_init(timer);
+    timer->year = 2020;
+    
 }
 
 void clock_tick(time_clock_t timer)

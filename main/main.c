@@ -315,17 +315,18 @@ void tarea_b2(void *args)
                     clock_decrementar_campo(clock_p->clock, clock_p->selected);
                     ESP_LOGI(TAG, "decrementa : %d", clock_p->clock->hr);
                     xEventGroupClearBits(_event_group, BOTON_2);
-                    xQueueSend(qHandle_clock, clock_p->clock, pdMS_TO_TICKS(20));
+                    xQueueSend(qHandle_clock, clock_p->clock, pdMS_TO_TICKS(10));
                 }
                 break;
 
             case MODO_ALARM_CONF:
                 if ((wBits & BOTON_2) != 0)
                 {
-
+                    ESP_LOGI(TAG, "¡B2! CONF ALARM");
+                    printbin(wBits);
                     clock_decrementar_campo(clock_p->alarm, clock_p->selected);
                     xEventGroupClearBits(_event_group, BOTON_2);
-                    xQueueSend(qHandle_alarm, clock_p->alarm, pdMS_TO_TICKS(20));
+                    xQueueSend(qHandle_alarm, clock_p->alarm, pdMS_TO_TICKS(10));
                 }
                 break;
             case MODO_ALARM: // alarma sonando
@@ -405,7 +406,11 @@ void tarea_b3(void *args)
         case MODO_ALARM_CONF:
             if ((wBits & BOTON_3) != 0)
             {
-                clock_incrementar_campo(clock_p->alarm, clock_p->selected);
+                ESP_LOGI(TAG, "¡B3! ALARM");
+                printbin(wBits);
+                int sel = clock_p->selected;
+                clock_incrementar_campo(clock_p->alarm, sel);
+                printf("%d %d\n", clock_p->alarm->year, clock_p->selected);
                 xEventGroupClearBits(_event_group, BOTON_3);
                 xQueueSend(qHandle_alarm, clock_p->alarm, pdMS_TO_TICKS(10));
             }

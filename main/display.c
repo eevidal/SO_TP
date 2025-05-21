@@ -1,6 +1,7 @@
 #include "display.h"
 #include "time_struct.h"
 #include "mode_op.h"
+#include "stdio.h"
 
 #define RESET_CLOCK_ANT_0()      \
     do                           \
@@ -53,7 +54,17 @@
     } while (0);
 
 
+int is_one2(long n, int b)
+{
+    return (n >> b) & 1;
+}
 
+void printbin2(unsigned long n)
+{
+    for (int b = 31; b >= 0; b--)
+        printf("%d", is_one2(n, b));
+    printf("\n");
+}
 
 
 void dibujar_pantalla(void *args)
@@ -165,7 +176,8 @@ void dibujar_pantalla(void *args)
         case MODO_ALARM_CONF:
             if ((wBits & CAMBIO_MODO)!=0)
             {
-                RESET_CLOCK_ANT_0();
+                printbin2(wBits);
+             //   RESET_CLOCK_ANT_0();
                 CLOCK_RESET_PANTALLA();
                 xEventGroupClearBits(_event_group, CAMBIO_MODO);
             }
