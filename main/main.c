@@ -121,7 +121,7 @@ void contar_decima(void *args)
     while (1)
     {
         // desición de diseño: esto es independiente del modo
-        EventBits_t wBits = xEventGroupWaitBits(_event_group, MODOS | CUENTA | RESET | EN_PAUSA, pdFALSE, pdFALSE, portMAX_DELAY);
+        EventBits_t wBits = xEventGroupWaitBits(_event_group, CUENTA | RESET | EN_PAUSA, pdFALSE, pdFALSE, portMAX_DELAY);
         //     ESP_LOGI(TAG, "Estado de los bits en contar_decima: %lu", wBits);
 
         if ((wBits & CUENTA) != 0)
@@ -138,11 +138,44 @@ void contar_decima(void *args)
                                           cronometro->decima
                                   );*/
             time_tick(cronometro);
-            xQueueSend(qHandle, cronometro, portMAX_DELAY);
+            switch (wBits & (MODOS))
+            {
+            case MODO_CLOCK_CONF:
+                break;
+            case MODO_CLOCK:
+                break;
+            case MODO_ALARM:
+                break;
+            case MODO_ALARM_CONF:
+                break;
+            case:
+            MODO_CRONO:
+                xQueueSend(qHandle, cronometro, portMAX_DELAY);
+                break;
+            case default:
+                break;
+            }
         }
         if ((wBits & RESET) != 0)
         {
             time_cero(cronometro);
+            switch (wBits & (MODOS))
+            {
+            case MODO_CLOCK_CONF:
+                break;
+            case MODO_CLOCK:
+                break;
+            case MODO_ALARM:
+                break;
+            case MODO_ALARM_CONF:
+                break;
+            case:
+            MODO_CRONO:
+                xQueueSend(qHandle, cronometro, portMAX_DELAY);
+                break;
+            case default:
+                break;
+            }
             xQueueSend(qHandle, cronometro, portMAX_DELAY);
         }
 
@@ -349,7 +382,7 @@ void tarea_b3(void *args)
     while (1)
     {
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_3 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
-        
+
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK_CONF:
@@ -425,7 +458,7 @@ void cambia_modo(void *args)
             break;
 
         case MODO_ALARM: // alarma sonando
-
+        xEventGroupClearBits(_event_group, BOTON_MODO);
             break;
         case MODO_ALARM_CONF:
             if ((wBits & BOTON_MODO) != 0)
@@ -446,7 +479,7 @@ void cambia_modo(void *args)
                 xEventGroupSetBits(_event_group, CAMBIO_MODO);
                 xEventGroupClearBits(_event_group, BLINK);
                 xEventGroupClearBits(_event_group, RED);
-                
+
                 ESP_LOGI(TAG, "¡CAMBIA A MODO CLOCK!");
             }
             break;
