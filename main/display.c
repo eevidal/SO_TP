@@ -13,6 +13,49 @@
         _clock_ant[0].year = 0;  \
     } while (0)
 
+#define DIBUJAR_PARCIAL(panel_base, centena, decena, unidad, decima) \
+    DibujarDigito(panel_base, 2, unidad);                            \
+    DibujarDigito(panel_base, 1, decena);                            \
+    DibujarDigito(panel_base, 0, centena);                           \
+    DibujarDigito(panel_base##_d, 0, decima);
+
+#define CRONO_RESET_PANTALLA()                                  \
+    do                                                          \
+    {                                                           \
+        ILI9341Fill(DIGITO_APAGADO);                            \
+        DibujarDigito(segundos, 2, 0);                          \
+        DibujarDigito(segundos, 1, 0);                          \
+        DibujarDigito(segundos, 0, 0);                          \
+        DibujarDigito(decimas, 0, 0);                           \
+        ILI9341DrawFilledCircle(178, 95, 5, DIGITO_ENCENDIDO);  \
+        ILI9341DrawFilledCircle(113, 160, 5, DIGITO_ENCENDIDO); \
+        ILI9341DrawFilledCircle(145, 220, 5, DIGITO_ENCENDIDO); \
+        ILI9341DrawFilledCircle(178, 280, 5, DIGITO_ENCENDIDO); \
+        DIBUJAR_PARCIAL(parcial1, 0, 0, 0, 0);                  \
+        DIBUJAR_PARCIAL(parcial2, 0, 0, 0, 0);                  \
+        DIBUJAR_PARCIAL(parcial3, 0, 0, 0, 0);                  \
+    } while (0)
+
+#define CLOCK_RESET_PANTALLA()                           \
+    do                                                         \
+    {                                                          \
+        ILI9341Fill(DIGITO_APAGADO);                           \
+        DIBUJAR_HORA(rhoras, 0, 0);                            \
+        DIBUJAR_HORA(rminutos, 0, 0);                          \
+        DIBUJAR_HORA(rsegundos, 0, 0);                         \
+        DIBUJAR_HORA(rdia, 0, 0);                              \
+        DIBUJAR_MES(rmes, 0, 0);                               \
+        DIBUJAR_YEAR(ryear, 0, 0);                             \
+        ILI9341DrawFilledCircle(75, 55, 3, DIGITO_ENCENDIDO);  \
+        ILI9341DrawFilledCircle(75, 35, 3, DIGITO_ENCENDIDO);  \
+        ILI9341DrawFilledCircle(150, 55, 3, DIGITO_ENCENDIDO); \
+        ILI9341DrawFilledCircle(150, 35, 3, DIGITO_ENCENDIDO); \
+    } while (0);
+
+
+
+
+
 void dibujar_pantalla(void *args)
 {
     int guardados = 0;
@@ -79,7 +122,7 @@ void dibujar_pantalla(void *args)
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK:
-            if (wBits & CAMBIO_MODO)
+            if ((wBits & CAMBIO_MODO)!=0)
             {
                 RESET_CLOCK_ANT_0();
                 CLOCK_RESET_PANTALLA();
@@ -92,7 +135,7 @@ void dibujar_pantalla(void *args)
             }
             break;
         case MODO_CLOCK_CONF:
-            if (wBits & CAMBIO_MODO)
+            if ((wBits & CAMBIO_MODO)!=0)
             {
                 RESET_CLOCK_ANT_0();
                 CLOCK_RESET_PANTALLA();
@@ -101,17 +144,13 @@ void dibujar_pantalla(void *args)
 
             if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)50) == pdPASS)
             {
+                DIBUJAR_TODO_RELOJ(_clock[0], _clock_ant[0], rhoras, rminutos, rsegundos, rdia, rmes, ryear);
                 _clock_ant[0] = _clock[0];
-                DIBUJAR_T(rhoras, _clock[0].hr / 10, _clock_ant[0].hr % 10);
-                DIBUJAR_HORA(rminutos, _clock[0].min, _clock_ant[0].min);
-                DIBUJAR_HORA(rsegundos, _clock[0].sec, _clock_ant[0].sec);
-                DIBUJAR_HORA(rdia, _clock[0].day, _clock_ant[0].day);
-                DIBUJAR_MES(rmes, _clock[0].month, _clock_ant[0].month);
-                DIBUJAR_YEAR(ryear, _clock[0].year, _clock_ant[0].year);
+
             }
             break;
         case MODO_ALARM:
-            if (wBits & CAMBIO_MODO)
+            if ((wBits & CAMBIO_MODO)!=0)
             {
                 RESET_CLOCK_ANT_0();
                 CLOCK_RESET_PANTALLA();
@@ -124,7 +163,7 @@ void dibujar_pantalla(void *args)
             }
             break;
         case MODO_ALARM_CONF:
-            if (wBits & CAMBIO_MODO)
+            if ((wBits & CAMBIO_MODO)!=0)
             {
                 RESET_CLOCK_ANT_0();
                 CLOCK_RESET_PANTALLA();
@@ -138,7 +177,7 @@ void dibujar_pantalla(void *args)
             }
             break;
         case MODO_CRONO:
-            if (wBits & CAMBIO_MODO)
+            if ((wBits & CAMBIO_MODO)!=0)
             {
                 CRONO_RESET_PANTALLA();
                 xEventGroupClearBits(_event_group, CAMBIO_MODO);

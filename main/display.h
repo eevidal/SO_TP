@@ -21,45 +21,6 @@
 #define DIGITO_APAGADO 0x3800
 #define DIGITO_FONDO ILI9341_BLACK
 
-#define CRONO_RESET_PANTALLA()                                  \
-    do                                                          \
-    {                                                           \
-        ILI9341Fill(DIGITO_APAGADO);                            \
-        DibujarDigito(segundos, 2, 0);                          \
-        DibujarDigito(segundos, 1, 0);                          \
-        DibujarDigito(segundos, 0, 0);                          \
-        DibujarDigito(decimas, 0, 0);                           \
-        ILI9341DrawFilledCircle(178, 95, 5, DIGITO_ENCENDIDO);  \
-        ILI9341DrawFilledCircle(113, 160, 5, DIGITO_ENCENDIDO); \
-        ILI9341DrawFilledCircle(145, 220, 5, DIGITO_ENCENDIDO); \
-        ILI9341DrawFilledCircle(178, 280, 5, DIGITO_ENCENDIDO); \
-        DIBUJAR_PARCIAL(parcial1, 0, 0, 0, 0);                  \
-        DIBUJAR_PARCIAL(parcial2, 0, 0, 0, 0);                  \
-        DIBUJAR_PARCIAL(parcial3, 0, 0, 0, 0);                  \
-    } while (0)
-
-#define CLOCK_RESET_PANTALLA()                           \
-    do                                                         \
-    {                                                          \
-        ILI9341Fill(DIGITO_APAGADO);                           \
-        DIBUJAR_HORA(rhoras, 0, 0);                            \
-        DIBUJAR_HORA(rminutos, 0, 0);                          \
-        DIBUJAR_HORA(rsegundos, 0, 0);                         \
-        DIBUJAR_HORA(rdia, 0, 0);                              \
-        DIBUJAR_MES(rmes, 0, 0);                               \
-        DIBUJAR_YEAR(ryear, 0, 0);                             \
-        ILI9341DrawFilledCircle(75, 55, 3, DIGITO_ENCENDIDO);  \
-        ILI9341DrawFilledCircle(75, 35, 3, DIGITO_ENCENDIDO);  \
-        ILI9341DrawFilledCircle(150, 55, 3, DIGITO_ENCENDIDO); \
-        ILI9341DrawFilledCircle(150, 35, 3, DIGITO_ENCENDIDO); \
-    } while (0);
-
-#define DIBUJAR_PARCIAL(panel_base, centena, decena, unidad, decima) \
-    DibujarDigito(panel_base, 2, unidad);                            \
-    DibujarDigito(panel_base, 1, decena);                            \
-    DibujarDigito(panel_base, 0, centena);                           \
-    DibujarDigito(panel_base##_d, 0, decima);
-
 #define DIBUJAR_SI_CAMBIA(actual, anterior, panel, posicion) \
     if (actual != anterior)                                  \
     {                                                        \
@@ -73,7 +34,7 @@
 #define EXTRAER_DECENAS(n) ((n) / 10)
 #define EXTRAER_UNIDADES(n) ((n) % 10)
 
-#define DIBUJAR_YEAR(panel_base, year_ac, year_ant)                            \                                                 
+#define DIBUJAR_YEAR(panel_base, year_ac, year_ant)                            \
     {                                                                          \
         int miles = EXTRAER_MILES(year_ac);                                    \
         int centenas = EXTRAER_CENTENAS(RESTO_MILES(year_ac));                 \
@@ -88,11 +49,9 @@
     DibujarDigito(panel_base, 1, centena);                      \
     DibujarDigito(panel_base, 0, mil);
 
-#define DIBUJAR_HORA(panel_base, hora_ac, hora_ant)       \
-    if (hora_ac != hora_ant)                              \
-    {                                                     \
-        DIBUJAR_T(panel_base, hora_ac / 10, hora_ac % 10) \
-    }
+#define DIBUJAR_HORA(panel_base, hora_ac, hora_ant) \
+    {                                               \
+        DIBUJAR_T(panel_base, hora_ac / 10, hora_ac % 10)}
 
 /* Podría mos cambiarla para mostrar las 3 primeras letras del mes*/
 #define DIBUJAR_MES(panel_base, mes_ac, mes_ant)        \
@@ -106,8 +65,8 @@
     DibujarDigito(panel_base, 0, decena);
 
 #define DIBUJAR_TODO_RELOJ(_clock_act, _clock_ant, h, m, s, d, mes, a) \
-    do                                                                     \
-    {                                                                      \
+    do                                                                 \
+    {                                                                  \
         DIBUJAR_T(h, _clock_act.hr / 10, _clock_ant.hr % 10);          \
         DIBUJAR_HORA(m, _clock_act.min, _clock_ant.min);               \
         DIBUJAR_HORA(s, _clock_act.sec, _clock_ant.sec);               \
