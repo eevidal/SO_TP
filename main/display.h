@@ -74,6 +74,18 @@
         DIBUJAR_YEAR(a, _clock_act.year, _clock_ant.year);             \
     } while (0)
 
+
+    #define DIBUJAR_TODO_RELOJ_A(_clock_act, _clock_ant, h, m, s, d, mes, a) \
+    do                                                                 \
+    {                                                                  \
+        DIBUJAR_T(h, _clock_act->hr / 10, _clock_ant->hr % 10);          \
+        DIBUJAR_HORA(m, _clock_act->min, _clock_ant->min);               \
+        DIBUJAR_HORA(s, _clock_act->sec, _clock_ant->sec);               \
+        DIBUJAR_HORA(d, _clock_act->day, _clock_ant->day);               \
+        DIBUJAR_MES(mes, _clock_act->month, _clock_ant->month);          \
+        DIBUJAR_YEAR(a, _clock_act->year, _clock_ant->year);             \
+    } while (0)
+
 typedef struct display_task
 {
     QueueHandle_t qcrono;

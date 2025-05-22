@@ -104,6 +104,15 @@ void dibujar_pantalla(void *args)
     time_clock _clock_ant[2] = {
         {0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0}};
+    
+    clock_settings _alarm, _alarm_ant;
+    _alarm.t = &(_clock[1]);
+    _alarm.select = 0;   
+    _alarm_ant.t = &(_clock_ant[1]);
+    _alarm_ant.select = 0;   
+
+    int clock_select =0;
+    bool alarm_set = false;
 
     ILI9341Init();
     ILI9341Rotate(ILI9341_Portrait_2);
@@ -129,7 +138,7 @@ void dibujar_pantalla(void *args)
     CLOCK_RESET_PANTALLA(); // crono
     while (1)
     {
-        EventBits_t wBits = xEventGroupWaitBits(_event_group, CAMBIO_MODO | MODOS | event_bits, pdFALSE, pdFALSE, (TickType_t)50);
+        EventBits_t wBits = xEventGroupWaitBits(_event_group, CAMBIO_MODO |  event_bits, pdFALSE, pdFALSE, (TickType_t)50);
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK:
@@ -182,10 +191,10 @@ void dibujar_pantalla(void *args)
                 xEventGroupClearBits(_event_group, CAMBIO_MODO);
             }
 
-            if (xQueueReceive(alarm_clock, &(_clock[1]), (TickType_t)50) == pdPASS)
+            if (xQueueReceive(alarm_clock, &(_alarm), (TickType_t)50) == pdPASS)
             {
-                DIBUJAR_TODO_RELOJ(_clock[1], _clock_ant[1], rhoras, rminutos, rsegundos, rdia, rmes, ryear);
-                _clock_ant[1] = _clock[1];
+                DIBUJAR_TODO_RELOJ_A(_alarm.t, _alarm_ant.t, rhoras, rminutos, rsegundos, rdia, rmes, ryear);
+                _alarm_ant.t = _alarm.t;
             }
             break;
         case MODO_CRONO:
