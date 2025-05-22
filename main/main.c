@@ -240,7 +240,7 @@ void tarea_b1(void *args)
 
     while (1)
     {
-        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_1 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_1 | CUENTA, pdFALSE, pdFALSE,pdMS_TO_TICKS(1)));
         {
 
             switch (wBits & (MODOS))
@@ -254,7 +254,7 @@ void tarea_b1(void *args)
                 clock_p->selected = (clock_p->selected + 1) % 6;
                 xEventGroupClearBits(_event_group, BOTON_1);
                 selected = clock_p->selected;
-                xQueueSend(qHandle_campo, &selected, pdMS_TO_TICKS(10));
+                xQueueSend(qHandle_campo, &selected, pdMS_TO_TICKS(0));
             }
             break;
             case MODO_ALARM_CONF:
@@ -266,14 +266,14 @@ void tarea_b1(void *args)
                     clock_p->alarm->select = (clock_p->alarm->select + 1) % 6;
                     xEventGroupClearBits(_event_group, BOTON_1);
                     selected = clock_p->alarm->select;
-                    xQueueSend(qHandle_campo, &selected, pdMS_TO_TICKS(10));
+                    xQueueSend(qHandle_campo, &selected, pdMS_TO_TICKS(0));
                 }
                 break;
 
             case MODO_CRONO:
                 // ESP_LOGI(TAG, "Estado de los bits en cambia_estado: %lu", wBits);
                 if (((wBits & CUENTA) != 0) && ((wBits & BOTON_1) != 0))
-                {
+                {      printbin(wBits);
                     xEventGroupClearBits(_event_group, CUENTA);
                     xEventGroupClearBits(_event_group, BOTON_ESTADO); // BOTON_1
                     xEventGroupClearBits(_event_group, BOTON_BORRAR); //BOTON_2
@@ -289,7 +289,6 @@ void tarea_b1(void *args)
                     xEventGroupClearBits(_event_group, RED);
                     xEventGroupClearBits(_event_group, BOTON_BORRAR);
 
-                    vTaskDelay(pdMS_TO_TICKS(20));
                 }
                 break;
             default:
@@ -409,10 +408,12 @@ void tarea_b3(void *args)
 
             break;
         case MODO_ALARM:
+              if ((wBits & BOTON_3) != 0)
+            {
             clock_incrementar_min(clock_p->alarm->t, 5);
             xEventGroupClearBits(_event_group, MODO_ALARM);
             xEventGroupClearBits(_event_group, BOTON_3);
-            xEventGroupSetBits(_event_group, MODO_CLOCK);
+            xEventGroupSetBits(_event_group, MODO_CLOCK);}
             break;
         case MODO_ALARM_CONF:
             if ((wBits & BOTON_3) != 0)
@@ -425,15 +426,19 @@ void tarea_b3(void *args)
             }
             break;
         case MODO_CRONO:
-            if (((wBits & CUENTA) & (wBits & BOTON_PARCIAL)) != 0)
+            if ((wBits & CUENTA) !=0 && (wBits & BOTON_3) != 0)
             {
                 printbin(wBits);
+                                ESP_LOGI(TAG, "¡B3! CRONO");
+              
                 xEventGroupSetBits(_event_group, TOMAR_PARCIAL);
                 xEventGroupClearBits(_event_group, BOTON_PARCIAL); // BOTON_3
             }
             break;
         default:
-            xEventGroupClearBits(_event_group, BOTON_3);
+              if ((wBits & BOTON_3) != 0)
+            {
+            xEventGroupClearBits(_event_group, BOTON_3);}
             break;
         }
     }
