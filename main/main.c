@@ -534,8 +534,7 @@ void dispara_alarma(void *args)
             {
                 if ((wBits & (MODO_ALARM)) == 0)
                 {
-                    xEventGroupSetBits(_event_group, BLINK);
-                    xEventGroupSetBits(_event_group, MODO_ALARM);
+
 
                     ESP_LOGI(TAG_ALARM, "¡ALARMA SONANDO!");
                     switch (wBits & (MODOS))
@@ -556,6 +555,9 @@ void dispara_alarma(void *args)
                         break;
                     }
                     xEventGroupClearBits(_event_group, MODOS);
+                    xEventGroupSetBits(_event_group, BLINK);
+                    xEventGroupSetBits(_event_group, MODO_ALARM);
+                    ESP_LOGI(TAG_ALARM, "¡ALARMA SONANDO!");
                 }
             }
         }
