@@ -650,10 +650,12 @@ void app_main(void)
         clock_args->alarm_seted = false;
         clock_args->selected = 0;
         clock_args->clock = malloc(sizeof(time_clock));
+        time_clock_t a = malloc(sizeof(time_clock));
+        clock_alarm_init(a);
         clock_args->alarm = malloc(sizeof(clock_settings));
         clock_args->alarm->select = 0;
         clock_init(clock_args->clock); /* reference time*/
-        clock_alarm_init(clock_args->alarm->t);
+        clock_args->alarm->t = a;
         clock_args->event_group = event_group;
 
         clock_args->modo = CLOCK;
@@ -664,18 +666,20 @@ void app_main(void)
         clock_args->handler_conf = q_clock_conf;
         if (xTaskCreate(contar_segundos, "clock", 10 * 1024, clock_args, tskIDLE_PRIORITY + 4, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear contar");
+        if (xTaskCreate(dispara_alarma, "alarma", 10 * 1024, clock_args, tskIDLE_PRIORITY + 4, NULL) != pdPASS)
+            ESP_LOGE(TAG, "Fallo al crear alarma");
 
-        if (xTaskCreate(tarea_b1, "status", 10 * 1024, clock_args, tskIDLE_PRIORITY, NULL) != pdPASS)
-            ESP_LOGE(TAG, "Fallo al crear status ");
+        if (xTaskCreate(tarea_b1, "b1", 10 * 1024, clock_args, tskIDLE_PRIORITY, NULL) != pdPASS)
+            ESP_LOGE(TAG, "Fallo al crear status/B1 ");
 
         if (xTaskCreate(tarea_b2, "borrar", 10 * 1024, clock_args, tskIDLE_PRIORITY, NULL) != pdPASS)
-            ESP_LOGE(TAG, "Fallo al crear borrado ");
+            ESP_LOGE(TAG, "Fallo al crear borrado /B2");
 
         if (xTaskCreate(tarea_b3, "parcial", 20 * 1024, clock_args, tskIDLE_PRIORITY, NULL) != pdPASS)
-            ESP_LOGE(TAG, "Fallo al crear parcial ");
+            ESP_LOGE(TAG, "Fallo al crear parcial/B3 ");
 
         if (xTaskCreate(cambia_modo, "modo", 2 * 1024, event_group, tskIDLE_PRIORITY, NULL) != pdPASS)
-            ESP_LOGE(TAG, "Fallo al crear parcial ");
+            ESP_LOGE(TAG, "Fallo al crear modo/B4 ");
         crono_args = malloc(sizeof(crono_task));
         crono_args->time = malloc(sizeof(time_struct));
         crono_args->event_group = event_group;

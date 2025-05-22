@@ -114,7 +114,7 @@ void clock_init(time_clock_t timer)
 void clock_alarm_init(time_clock_t timer)
 {
     clock_init(timer);
-    timer->year = 2020;
+    timer->hr = 22;
     
 }
 
