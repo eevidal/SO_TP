@@ -637,7 +637,7 @@ void app_main(void)
         leds_args->gpio_id_verde = LED_VERDE;
 
         if (xTaskCreate(tarea_led, "led", 1024, leds_args, tskIDLE_PRIORITY, NULL) != pdPASS)
-            ESP_LOGE(TAG, "Fallo al crear staus ");
+            ESP_LOGE(TAG, "Fallo al crear status ");
 
         clock_args = malloc(sizeof(clock_task));
         clock_args->alarm_seted = false;
@@ -655,16 +655,16 @@ void app_main(void)
         clock_args->handler_alarm = q_alarm;
         clock_args->handler_crono = q_crono;
         clock_args->handler_conf = q_clock_conf;
-        if (xTaskCreate(contar_segundos, "clock", 3 * 1024, clock_args, tskIDLE_PRIORITY + 4, NULL) != pdPASS)
+        if (xTaskCreate(contar_segundos, "clock", 10 * 1024, clock_args, tskIDLE_PRIORITY + 4, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear contar");
 
-        if (xTaskCreate(tarea_b1, "status", 100 * 1024, clock_args, tskIDLE_PRIORITY, NULL) != pdPASS)
+        if (xTaskCreate(tarea_b1, "status", 10 * 1024, clock_args, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear status ");
 
         if (xTaskCreate(tarea_b2, "borrar", 10 * 1024, clock_args, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear borrado ");
 
-        if (xTaskCreate(tarea_b3, "parcial", 10 * 1024, clock_args, tskIDLE_PRIORITY, NULL) != pdPASS)
+        if (xTaskCreate(tarea_b3, "parcial", 20 * 1024, clock_args, tskIDLE_PRIORITY, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear parcial ");
 
         if (xTaskCreate(cambia_modo, "modo", 2 * 1024, event_group, tskIDLE_PRIORITY, NULL) != pdPASS)
@@ -687,7 +687,7 @@ void app_main(void)
         display_args->event_group = event_group;
         display_args->parcial_bits = TOMAR_PARCIAL;
         display_args->reset_bits = RESET;
-        if (xTaskCreate(dibujar_pantalla, "pantalla", 20 * 1024, display_args, tskIDLE_PRIORITY + 2, NULL) != pdPASS)
+        if (xTaskCreate(dibujar_pantalla, "pantalla", 50 * 1024, display_args, tskIDLE_PRIORITY + 2, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear pantalla");
     }
     else
