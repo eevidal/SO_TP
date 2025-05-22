@@ -71,7 +71,7 @@ typedef struct crono_task
 
     EventGroupHandle_t event_group;
     QueueHandle_t handler_time;
-    int estado; 
+    int estado;
 } crono_task;
 
 typedef struct crono_task *crono_task_t;
@@ -209,10 +209,10 @@ void contar_segundos(void *args)
         case MODO_CRONO:
             break;
         case MODO_ALARM_CONF:
-            xQueueSend(qHandle_alarm, clock_p->alarm, pdMS_TO_TICKS(10));    
+            xQueueSend(qHandle_alarm, clock_p->alarm, pdMS_TO_TICKS(10));
             break;
-        case MODO_ALARM:
-            xQueueSend(qHandle, clock, pdMS_TO_TICKS(10));
+        case MODO_ALARM: ESP_LOGI(TAG_ALARM, "¡ALARMA SONANDO!");
+
             break;
         default:
             break;
@@ -240,23 +240,23 @@ void tarea_b1(void *args)
 
     while (1)
     {
-        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_1 | CUENTA, pdFALSE, pdFALSE,pdMS_TO_TICKS(1)));
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_1 | CUENTA, pdFALSE, pdFALSE, pdMS_TO_TICKS(1)));
         {
 
             switch (wBits & (MODOS))
             {
             case MODO_CLOCK_CONF:
 
-            if ((wBits & BOTON_1) != 0)
-            {
-                ESP_LOGI(TAG, "Estado de los bits en cambia_campo: %lu", wBits);
-                printbin(wBits);
-                clock_p->selected = (clock_p->selected + 1) % 6;
-                xEventGroupClearBits(_event_group, BOTON_1);
-                selected = clock_p->selected;
-                xQueueSend(qHandle_campo, &selected, pdMS_TO_TICKS(0));
-            }
-            break;
+                if ((wBits & BOTON_1) != 0)
+                {
+                    ESP_LOGI(TAG, "Estado de los bits en cambia_campo: %lu", wBits);
+                    printbin(wBits);
+                    clock_p->selected = (clock_p->selected + 1) % 6;
+                    xEventGroupClearBits(_event_group, BOTON_1);
+                    selected = clock_p->selected;
+                    xQueueSend(qHandle_campo, &selected, pdMS_TO_TICKS(0));
+                }
+                break;
             case MODO_ALARM_CONF:
 
                 if ((wBits & BOTON_1) != 0)
@@ -273,10 +273,11 @@ void tarea_b1(void *args)
             case MODO_CRONO:
                 // ESP_LOGI(TAG, "Estado de los bits en cambia_estado: %lu", wBits);
                 if (((wBits & CUENTA) != 0) && ((wBits & BOTON_1) != 0))
-                {      printbin(wBits);
+                {
+                    printbin(wBits);
                     xEventGroupClearBits(_event_group, CUENTA);
                     xEventGroupClearBits(_event_group, BOTON_ESTADO); // BOTON_1
-                    xEventGroupClearBits(_event_group, BOTON_BORRAR); //BOTON_2
+                    xEventGroupClearBits(_event_group, BOTON_BORRAR); // BOTON_2
                     xEventGroupClearBits(_event_group, BLINK);
                     xEventGroupSetBits(_event_group, EN_PAUSA);
                     xEventGroupSetBits(_event_group, RED);
@@ -288,7 +289,6 @@ void tarea_b1(void *args)
                     xEventGroupClearBits(_event_group, BOTON_ESTADO); // BOTON_1
                     xEventGroupClearBits(_event_group, RED);
                     xEventGroupClearBits(_event_group, BOTON_BORRAR);
-
                 }
                 break;
             default:
@@ -391,7 +391,7 @@ void tarea_b3(void *args)
     EventGroupHandle_t _event_group = clock_p->event_group;
     QueueHandle_t qHandle = clock_p->handler_clock;
     QueueHandle_t qHandle_alarm = clock_p->handler_alarm;
-    
+
     while (1)
     {
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_3 | CUENTA, pdFALSE, pdFALSE, portMAX_DELAY));
@@ -408,12 +408,14 @@ void tarea_b3(void *args)
 
             break;
         case MODO_ALARM:
-              if ((wBits & BOTON_3) != 0)
+            if ((wBits & BOTON_3) != 0)
             {
-            clock_incrementar_min(clock_p->alarm->t, 5);
-            xEventGroupClearBits(_event_group, MODO_ALARM);
-            xEventGroupClearBits(_event_group, BOTON_3);
-            xEventGroupSetBits(_event_group, MODO_CLOCK);}
+                clock_incrementar_min(clock_p->alarm->t, 5);
+                xEventGroupClearBits(_event_group, MODO_ALARM);
+                xEventGroupClearBits(_event_group, BLINK);
+                xEventGroupClearBits(_event_group, BOTON_3);
+                xEventGroupSetBits(_event_group, MODO_CLOCK);
+            }
             break;
         case MODO_ALARM_CONF:
             if ((wBits & BOTON_3) != 0)
@@ -426,19 +428,20 @@ void tarea_b3(void *args)
             }
             break;
         case MODO_CRONO:
-            if ((wBits & CUENTA) !=0 && (wBits & BOTON_3) != 0)
+            if ((wBits & CUENTA) != 0 && (wBits & BOTON_3) != 0)
             {
                 printbin(wBits);
-                                ESP_LOGI(TAG, "¡B3! CRONO");
-              
+                ESP_LOGI(TAG, "¡B3! CRONO");
+
                 xEventGroupSetBits(_event_group, TOMAR_PARCIAL);
                 xEventGroupClearBits(_event_group, BOTON_PARCIAL); // BOTON_3
             }
             break;
         default:
-              if ((wBits & BOTON_3) != 0)
+            if ((wBits & BOTON_3) != 0)
             {
-            xEventGroupClearBits(_event_group, BOTON_3);}
+                xEventGroupClearBits(_event_group, BOTON_3);
+            }
             break;
         }
     }
@@ -451,8 +454,8 @@ void cambia_modo(void *args)
     while (1)
     {
 
-        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_MODO, pdFALSE, pdFALSE, portMAX_DELAY));
-        ESP_LOGI(TAG, "Estado de los bits en cambia_modo: %lu", (wBits & (MODOS)));
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_MODO,  pdFALSE, pdFALSE, portMAX_DELAY));
+   
         switch (wBits & (MODOS))
         {
         // Reloj ->Reloj Config ->Alarma Config-> Crónometro
@@ -488,7 +491,9 @@ void cambia_modo(void *args)
                 xEventGroupSetBits(_event_group, MODO_CRONO);
                 xEventGroupClearBits(_event_group, BOTON_MODO);
                 xEventGroupSetBits(_event_group, CAMBIO_MODO);
-                ESP_LOGI(TAG, "¡CAMBIA A MODO CRONO!");
+                  ESP_LOGI(TAG, "¡CAMBIA A MODO CRONO!");
+                if ((wBits & CUENTA) !=0 )
+                          xEventGroupSetBits(_event_group, BLINK);
             }
             break;
         case MODO_CRONO: // CRONO
@@ -523,42 +528,39 @@ void dispara_alarma(void *args)
     {
         vTaskDelayUntil(&last_check, check_interval);
         EventBits_t wBits = (xEventGroupWaitBits(_event_group, MODOS, pdFALSE, pdFALSE, 0));
-        if (clock_p->alarm_seted)
+        if (clock->hr == alarm->hr &&
+            clock->min == alarm->min &&
+            clock->sec == alarm->sec &&
+            clock->day == alarm->day &&
+            clock->month == alarm->month &&
+            clock->year == alarm->year)
         {
-            if (clock->hr == alarm->hr &&
-                clock->min == alarm->min &&
-                clock->sec == alarm->sec &&
-                clock->day == alarm->day &&
-                clock->month == alarm->month &&
-                clock->year == alarm->year)
+            if ((wBits & (MODO_ALARM)) == 0)
             {
-                if ((wBits & (MODO_ALARM)) == 0)
+                clock_p->alarm_seted = true;
+
+                ESP_LOGI(TAG_ALARM, "¡ALARMA SONANDO!");
+                switch (wBits & (MODOS))
                 {
-
-
-                    ESP_LOGI(TAG_ALARM, "¡ALARMA SONANDO!");
-                    switch (wBits & (MODOS))
-                    {
-                    case MODO_CLOCK:
-                        clock_p->modo = CLOCK;
-                        break;
-                    case MODO_CLOCK_CONF:
-                        clock_p->modo = CLOCK_CONF;
-                        break;
-                    case MODO_CRONO:
-                        clock_p->modo = CRONO;
-                        break;
-                    case MODO_ALARM_CONF:
-                        clock_p->modo = ALARM_CONF;
-                        break;
-                    default:
-                        break;
-                    }
-                    xEventGroupClearBits(_event_group, MODOS);
-                    xEventGroupSetBits(_event_group, BLINK);
-                    xEventGroupSetBits(_event_group, MODO_ALARM);
-                    ESP_LOGI(TAG_ALARM, "¡ALARMA SONANDO!");
+                case MODO_CLOCK:
+                    clock_p->modo = CLOCK;
+                    break;
+                case MODO_CLOCK_CONF:
+                    clock_p->modo = CLOCK_CONF;
+                    break;
+                case MODO_CRONO:
+                    clock_p->modo = CRONO;
+                    break;
+                case MODO_ALARM_CONF:
+                    clock_p->modo = ALARM_CONF;
+                    break;
+                default:
+                    break;
                 }
+                xEventGroupClearBits(_event_group, MODOS);
+                xEventGroupSetBits(_event_group, BLINK);
+                xEventGroupSetBits(_event_group, MODO_ALARM);
+                ESP_LOGI(TAG_ALARM, "¡ALARMA SONANDO!");
             }
         }
     }
@@ -694,7 +696,6 @@ void app_main(void)
         display_args->qalarm = q_alarm;
         display_args->qconf = q_clock_conf;
         display_args->selected = 0;
-        display_args->alarm_set = false;
         display_args->event_group = event_group;
         display_args->parcial_bits = TOMAR_PARCIAL;
         display_args->reset_bits = RESET;

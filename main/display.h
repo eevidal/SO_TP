@@ -93,7 +93,6 @@ typedef struct display_task
     EventGroupHandle_t event_group;
     uint8_t parcial_bits;
     uint8_t reset_bits;
-    bool alarm_set;
     int selected;
 
 } display_task;
