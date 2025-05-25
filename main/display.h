@@ -92,7 +92,7 @@ typedef struct display_task
     QueueHandle_t qclock, qalarm, qconf;
     EventGroupHandle_t event_group;
     uint8_t parcial_bits;
-    uint8_t reset_bits;
+    uint32_t reset_bits;
     int selected;
 
 } display_task;

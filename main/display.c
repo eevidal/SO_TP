@@ -147,7 +147,7 @@ void dibujar_pantalla(void *args)
     panel_t rmes = CrearPanel(47, 180, 2, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO_DG, DIGITO_APAGADO, DIGITO_FONDO);
     panel_t ryear = CrearPanel(80, 240, 4, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO_DG, DIGITO_APAGADO, DIGITO_FONDO);
 
-    CLOCK_RESET_PANTALLA(); // crono
+    CLOCK_RESET_PANTALLA(); 
     while (1)
     {
         EventBits_t wBits = xEventGroupWaitBits(_event_group, CAMBIO_MODO | event_bits, pdFALSE, pdFALSE, (TickType_t)1);

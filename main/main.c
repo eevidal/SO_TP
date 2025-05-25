@@ -159,7 +159,7 @@ void contar_decima(void *args)
         }
         if ((wBits & RESET) != 0)
         {
-            
+
             switch (wBits & (MODOS))
             {
             case MODO_CLOCK_CONF:
@@ -175,12 +175,11 @@ void contar_decima(void *args)
                 xEventGroupSetBits(_event_group, RESET_PANTALLA);
                 xQueueSend(qHandle, cronometro, portMAX_DELAY);
                 xEventGroupClearBits(_event_group, RESET);
-            
+
                 break;
             default:
                 break;
             }
- 
         }
 
         vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(100));
@@ -216,7 +215,8 @@ void contar_segundos(void *args)
         case MODO_ALARM_CONF:
             xQueueSend(qHandle_alarm, clock_p->alarm, pdMS_TO_TICKS(10));
             break;
-        case MODO_ALARM: ESP_LOGI(TAG_ALARM, "¡ALARMA SONANDO!");
+        case MODO_ALARM:
+            ESP_LOGI(TAG_ALARM, "¡ALARMA SONANDO!");
 
             break;
         default:
@@ -227,15 +227,7 @@ void contar_segundos(void *args)
         vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(1000)); // cuenta segundos
     }
 }
-// void cambia_estado(void *args)
 
-void cambiar_campo(int selected)
-{
-    selected++;
-    if (selected == 6)
-        selected = 0;
-    ESP_LOGI(TAG, "Selected: %d", selected);
-}
 void tarea_b1(void *args)
 {
     clock_task_t clock_p = (clock_task_t)args;
@@ -459,8 +451,8 @@ void cambia_modo(void *args)
     while (1)
     {
 
-        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_MODO,  pdFALSE, pdFALSE, portMAX_DELAY));
-   
+        EventBits_t wBits = (xEventGroupWaitBits(_event_group, BOTON_MODO, pdFALSE, pdFALSE, portMAX_DELAY));
+
         switch (wBits & (MODOS))
         {
         // Reloj ->Reloj Config ->Alarma Config-> Crónometro
@@ -496,9 +488,9 @@ void cambia_modo(void *args)
                 xEventGroupSetBits(_event_group, MODO_CRONO);
                 xEventGroupClearBits(_event_group, BOTON_MODO);
                 xEventGroupSetBits(_event_group, CAMBIO_MODO);
-                  ESP_LOGI(TAG, "¡CAMBIA A MODO CRONO!");
-                if ((wBits & CUENTA) !=0 )
-                          xEventGroupSetBits(_event_group, BLINK);
+                ESP_LOGI(TAG, "¡CAMBIA A MODO CRONO!");
+                if ((wBits & CUENTA) != 0)
+                    xEventGroupSetBits(_event_group, BLINK);
             }
             break;
         case MODO_CRONO: // CRONO
@@ -509,6 +501,7 @@ void cambia_modo(void *args)
                 xEventGroupClearBits(_event_group, BOTON_MODO);
                 xEventGroupSetBits(_event_group, CAMBIO_MODO);
                 xEventGroupClearBits(_event_group, BLINK);
+                  xEventGroupSetBits(_event_group, RED);
                 xEventGroupClearBits(_event_group, RED);
 
                 ESP_LOGI(TAG, "¡CAMBIA A MODO CLOCK!");
