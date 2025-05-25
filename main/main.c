@@ -52,9 +52,10 @@ SPDX-License-Identifier: MIT
 #define BLINK 1 << 3
 #define RED 1 << 4
 #define CUENTA 1 << 5
-#define RESET 1 << 6
+#define RESET_PANTALLA 1 << 6
 #define TOMAR_PARCIAL 1 << 7
 #define EN_PAUSA 1 << 8
+#define RESET 1 << 16
 
 #define BOTON_MODO 1 << 9
 
@@ -158,7 +159,7 @@ void contar_decima(void *args)
         }
         if ((wBits & RESET) != 0)
         {
-            time_cero(cronometro);
+            
             switch (wBits & (MODOS))
             {
             case MODO_CLOCK_CONF:
@@ -170,12 +171,16 @@ void contar_decima(void *args)
             case MODO_ALARM_CONF:
                 break;
             case MODO_CRONO:
+                time_cero(cronometro);
+                xEventGroupSetBits(_event_group, RESET_PANTALLA);
                 xQueueSend(qHandle, cronometro, portMAX_DELAY);
+                xEventGroupClearBits(_event_group, RESET);
+            
                 break;
             default:
                 break;
             }
-            xQueueSend(qHandle, cronometro, portMAX_DELAY);
+ 
         }
 
         vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(100));
@@ -698,7 +703,7 @@ void app_main(void)
         display_args->selected = 0;
         display_args->event_group = event_group;
         display_args->parcial_bits = TOMAR_PARCIAL;
-        display_args->reset_bits = RESET;
+        display_args->reset_bits = RESET_PANTALLA;
         if (xTaskCreate(dibujar_pantalla, "pantalla", 50 * 1024, display_args, tskIDLE_PRIORITY + 2, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear pantalla");
     }
