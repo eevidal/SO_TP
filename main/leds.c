@@ -1,6 +1,5 @@
 #include <leds.h>
 
-
 void tarea_led(void *args)
 {
     led_task_t parametros = (led_task_t)args;
@@ -29,7 +28,10 @@ void tarea_led(void *args)
             vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(parametros->tiempo));
             gpio_set_level(parametros->gpio_id_verde, 0);
         }
+        if (((uxBits & parametros->mask_red) == 0) && ((uxBits & parametros->mask_red) == 0))
+        {
+            gpio_set_level(parametros->gpio_id_verde, 0);
+            gpio_set_level(parametros->gpio_id_red, 0);
+        }
     }
 }
-
-
