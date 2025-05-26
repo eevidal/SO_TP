@@ -12,10 +12,13 @@
 #define DIGITO_ALTO_A 60
 #define DIGITO_ANCHO_P 30
 #define DIGITO_ALTO_P 50
+#define DIGITO_ANCHO_E 15
+#define DIGITO_ALTO_E 30
 #define DIGITO_ENCENDIDO ILI9341_WHITE
 #define DIGITO_ENCENDIDO_G ILI9341_GREEN
 #define DIGITO_ENCENDIDO_R ILI9341_RED
 #define DIGITO_ENCENDIDO_B ILI9341_BLUE
+#define DIGITO_ENCENDIDO_Y ILI9341_YELLOW
 #define DIGITO_ENCENDIDO_DG ILI9341_DARKGREY
 
 #define DIGITO_APAGADO 0x3800
@@ -85,6 +88,15 @@
         DIBUJAR_MES(mes, _clock_act->month, _clock_ant->month);          \
         DIBUJAR_YEAR(a, _clock_act->year, _clock_ant->year);             \
     } while (0)
+
+#define MASCARA_A_POSICION(mascara) ( (mascara == 1) ? 0 : \
+                                                 (mascara == 2) ? 1 : \
+                                                 (mascara == 4) ? 2 : \
+                                                 (mascara == 8) ? 3 : \
+                                                 (mascara == 16) ? 4 : \
+                                                 (mascara == 32) ? 5 : \
+                                                 (mascara == 64) ? 6 : \
+                                                 (mascara == 128) ? 7 : -1 ) 
 
 typedef struct display_task
 {

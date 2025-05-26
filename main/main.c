@@ -341,22 +341,27 @@ void tarea_b2(void *args)
                     clock_p->alarm_seted = !clock_p->alarm_seted;
                     xEventGroupClearBits(_event_group, MODO_ALARM);
                     xEventGroupClearBits(_event_group, BOTON_2);
+                        xEventGroupClearBits(_event_group, BLINK);
                     switch (clock_p->modo)
                     {
                     case CLOCK:
                         xEventGroupSetBits(_event_group, MODO_CLOCK);
-                         xEventGroupClearBits(_event_group, BLINK);
+                    
                         break;
                     case CLOCK_CONF:
                         xEventGroupSetBits(_event_group, MODO_CLOCK_CONF);
-                         xEventGroupClearBits(_event_group, BLINK);
+                 
                         break;
                     case ALARM_CONF:
                         xEventGroupSetBits(_event_group, MODO_ALARM_CONF);
-                         xEventGroupClearBits(_event_group, BLINK);
+                   
                         break;
                     case CRONO:
                         xEventGroupSetBits(_event_group, MODO_CRONO);
+                        if ((wBits & CUENTA) != 0)
+                            xEventGroupSetBits(_event_group, BLINK);
+                        else
+                            xEventGroupSetBits(_event_group, RED);
                         break;
 
                     default:
@@ -412,30 +417,35 @@ void tarea_b3(void *args)
                 clock_incrementar_min(clock_p->alarm->t, 5);
                 xEventGroupClearBits(_event_group, MODO_ALARM);
                 xEventGroupClearBits(_event_group, BOTON_3);
-               
+                xEventGroupClearBits(_event_group, BLINK);
+
                 switch (clock_p->modo)
                 {
                 case CLOCK:
                     xEventGroupSetBits(_event_group, MODO_CLOCK);
-                     xEventGroupClearBits(_event_group, BLINK);
+                    
                     break;
                 case CLOCK_CONF:
                     xEventGroupSetBits(_event_group, MODO_CLOCK_CONF);
-                     xEventGroupClearBits(_event_group, BLINK);
+         
                     break;
                 case ALARM_CONF:
                     xEventGroupSetBits(_event_group, MODO_ALARM_CONF);
-                     xEventGroupClearBits(_event_group, BLINK);
+             
                     break;
                 case CRONO:
                     xEventGroupSetBits(_event_group, MODO_CRONO);
+                    if ((wBits & CUENTA) != 0)
+                        xEventGroupSetBits(_event_group, BLINK);
+                    else
+                        xEventGroupSetBits(_event_group, RED);
                     break;
 
                 default:
                     break;
                 }
             }
-
+            break;
         case MODO_ALARM_CONF:
             if ((wBits & BOTON_3) != 0)
             {
@@ -720,7 +730,7 @@ void app_main(void)
         display_args->event_group = event_group;
         display_args->parcial_bits = TOMAR_PARCIAL;
         display_args->reset_bits = RESET_PANTALLA;
-        if (xTaskCreate(dibujar_pantalla, "pantalla", 50 * 1024, display_args, tskIDLE_PRIORITY + 2, NULL) != pdPASS)
+        if (xTaskCreate(dibujar_pantalla, "pantalla", 54 * 1024, display_args, tskIDLE_PRIORITY + 2, NULL) != pdPASS)
             ESP_LOGE(TAG, "Fallo al crear pantalla");
     }
     else

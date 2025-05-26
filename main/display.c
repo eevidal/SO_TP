@@ -125,7 +125,7 @@ void dibujar_pantalla(void *args)
 
     int clock_select = 0;
     bool alarm_set = false;
-
+    int mod;
     ILI9341Init();
     ILI9341Rotate(ILI9341_Portrait_2);
 
@@ -147,10 +147,14 @@ void dibujar_pantalla(void *args)
     panel_t rmes = CrearPanel(47, 180, 2, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO_DG, DIGITO_APAGADO, DIGITO_FONDO);
     panel_t ryear = CrearPanel(80, 240, 4, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO_DG, DIGITO_APAGADO, DIGITO_FONDO);
 
+    panel_t estado = CrearPanel(190, 120, 1, DIGITO_ALTO_E, DIGITO_ANCHO_E, DIGITO_ENCENDIDO_Y, DIGITO_APAGADO, DIGITO_FONDO);
+
     CLOCK_RESET_PANTALLA(); 
     while (1)
     {
         EventBits_t wBits = xEventGroupWaitBits(_event_group, CAMBIO_MODO | event_bits, pdFALSE, pdFALSE, (TickType_t)1);
+        mod = (wBits & (MODOS));
+        DibujarDigito(estado,0,MASCARA_A_POSICION(mod>>9));
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK:
