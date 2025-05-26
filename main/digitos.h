@@ -80,6 +80,7 @@ panel_t CrearPanel(uint16_t x, uint16_t y, uint16_t digitos, uint16_t alto, uint
  */
 void DibujarDigito(panel_t self, uint8_t posicion, uint8_t valor);
 void ChangeColor(panel_t self, uint16_t encendido);
+void BorrarDigito(panel_t self, uint8_t digito);
 
 /* === End of documentation ======================================================================================== */
 

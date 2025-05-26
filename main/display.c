@@ -147,7 +147,7 @@ void dibujar_pantalla(void *args)
     panel_t rmes = CrearPanel(47, 180, 2, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO_DG, DIGITO_APAGADO, DIGITO_FONDO);
     panel_t ryear = CrearPanel(80, 240, 4, DIGITO_ALTO_P, DIGITO_ANCHO_P, DIGITO_ENCENDIDO_DG, DIGITO_APAGADO, DIGITO_FONDO);
 
-    panel_t estado = CrearPanel(190, 120, 1, DIGITO_ALTO_E, DIGITO_ANCHO_E, DIGITO_ENCENDIDO_Y, DIGITO_APAGADO, DIGITO_FONDO);
+    panel_t estado = CrearPanel(10, 258, 1, DIGITO_ALTO_E, DIGITO_ANCHO_E, DIGITO_ENCENDIDO_Y, DIGITO_APAGADO, DIGITO_FONDO);
 
     CLOCK_RESET_PANTALLA(); 
     while (1)
@@ -191,11 +191,11 @@ void dibujar_pantalla(void *args)
                 CLOCK_RESET_PANTALLA();
                 xEventGroupClearBits(_event_group, CAMBIO_MODO);
             }
-            if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)5) == pdPASS)
+           /* if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)5) == pdPASS)
             {
-                DIBUJAR_TODO_RELOJ(_clock[1], _clock_ant[1], rhoras, rminutos, rsegundos, rdia, rmes, ryear);
+                DIBUJAR_TODO_RELOJ_A(_clock[1], _clock_ant[1], rhoras, rminutos, rsegundos, rdia, rmes, ryear);
                 _clock_ant[1] = _clock[1];
-            }
+            }*/
             break;
         case MODO_ALARM_CONF:
             if ((wBits & CAMBIO_MODO) != 0)
@@ -208,7 +208,7 @@ void dibujar_pantalla(void *args)
 
             if (xQueueReceive(alarm_clock, &(_alarm), (TickType_t)5) == pdPASS)
             {
-                DIBUJAR_TODO_RELOJ_A(_alarm.t, _alarm_ant.t, rhoras, rminutos, rsegundos, rdia, rmes, ryear);
+                DIBUJAR_TODO_RELOJ_A(_alarm.t, _alarm_ant.t, rhoras, rminutos, rsegundos, rdia, rmes, ryear, _alarm.select);
                 _alarm_ant.t = _alarm.t;
             }
             break;

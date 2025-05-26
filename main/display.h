@@ -56,9 +56,25 @@
     {                                               \
         DIBUJAR_T(panel_base, hora_ac / 10, hora_ac % 10)}
 
+#define DIBUJAR_HORA_B(panel_base, hora_ac, hora_ant)     \
+    for (int i = 0; i < 1; ++i)                           \
+    {                                                     \
+        BorrarDigito(panel_base, 1);                      \
+        BorrarDigito(panel_base, 0);                      \
+        vTaskDelay(pdMS_TO_TICKS(100));                   \
+        DIBUJAR_T(panel_base, hora_ac / 10, hora_ac % 10) \
+    }
 /* Podría mos cambiarla para mostrar las 3 primeras letras del mes*/
-#define DIBUJAR_MES(panel_base, mes_ac, mes_ant)        \
+#define DIBUJAR_MES(panel_base, mes_ac, mes_ant) \
+    {                                            \
+        DIBUJAR_T(panel_base, mes_ac / 10, mes_ac % 10)}
+
+#define DIBUJAR_MES_B(panel_base, mes_ac, mes_ant)      \
+    for (int i = 0; i < 1; ++i)                         \
     {                                                   \
+        BorrarDigito(panel_base, 1);                    \
+        BorrarDigito(panel_base, 0);                    \
+        vTaskDelay(pdMS_TO_TICKS(100));                 \
         DIBUJAR_T(panel_base, mes_ac / 10, mes_ac % 10) \
     }
 
@@ -69,7 +85,7 @@
 #define DIBUJAR_TODO_RELOJ(_clock_act, _clock_ant, h, m, s, d, mes, a) \
     do                                                                 \
     {                                                                  \
-        DIBUJAR_HORA(h, _clock_act.hr , _clock_ant.hr );          \
+        DIBUJAR_HORA(h, _clock_act.hr, _clock_ant.hr);                 \
         DIBUJAR_HORA(m, _clock_act.min, _clock_ant.min);               \
         DIBUJAR_HORA(s, _clock_act.sec, _clock_ant.sec);               \
         DIBUJAR_HORA(d, _clock_act.day, _clock_ant.day);               \
@@ -77,26 +93,66 @@
         DIBUJAR_YEAR(a, _clock_act.year, _clock_ant.year);             \
     } while (0)
 
-
-    #define DIBUJAR_TODO_RELOJ_A(_clock_act, _clock_ant, h, m, s, d, mes, a) \
-    do                                                                 \
-    {                                                                  \
-        DIBUJAR_HORA(h, _clock_act->hr , _clock_ant->hr);          \
-        DIBUJAR_HORA(m, _clock_act->min, _clock_ant->min);               \
-        DIBUJAR_HORA(s, _clock_act->sec, _clock_ant->sec);               \
-        DIBUJAR_HORA(d, _clock_act->day, _clock_ant->day);               \
-        DIBUJAR_MES(mes, _clock_act->month, _clock_ant->month);          \
-        DIBUJAR_YEAR(a, _clock_act->year, _clock_ant->year);             \
+#define DIBUJAR_TODO_RELOJ_B(_clock_act, _clock_ant, h, m, s, d, mes, a, sel) \
+    do                                                                        \
+    {                                                                         \
+        if (sel == 0)                                                         \
+            DIBUJAR_HORA_B(h, _clock_act.hr, _clock_ant.hr)                   \
+        else                                                                  \
+            DIBUJAR_HORA(h, _clock_act.hr, _clock_ant.hr);                    \
+        if (sel == 1)                                                         \
+            DIBUJAR_HORA_B(m, _clock_act.min, _clock_ant.min)                 \
+        else                                                                  \
+            DIBUJAR_HORA(m, _clock_act.min, _clock_ant.min);                  \
+        if (sel == 2)                                                         \
+            DIBUJAR_HORA_B(s, _clock_act.sec, _clock_ant.sec)                 \
+        else                                                                  \
+            DIBUJAR_HORA(s, _clock_act.sec, _clock_ant.sec);                  \
+        if (sel == 3)                                                         \
+            DIBUJAR_HORA_B(d, _clock_act.day, _clock_ant.day)                 \
+        else                                                                  \
+            DIBUJAR_HORA(d, _clock_act.day, _clock_ant.day);                  \
+        if (sel == 4)                                                         \
+            DIBUJAR_MES(mes, _clock_act.month, _clock_ant.month)              \
+        else                                                                  \
+            DIBUJAR_MES(mes, _clock_act.month, _clock_ant.month);             \
+        DIBUJAR_YEAR(a, _clock_act.year, _clock_ant.year);                    \
     } while (0)
 
-#define MASCARA_A_POSICION(mascara) ( (mascara == 1) ? 0 : \
-                                                 (mascara == 2) ? 1 : \
-                                                 (mascara == 4) ? 2 : \
-                                                 (mascara == 8) ? 3 : \
-                                                 (mascara == 16) ? 4 : \
-                                                 (mascara == 32) ? 5 : \
-                                                 (mascara == 64) ? 6 : \
-                                                 (mascara == 128) ? 7 : -1 ) 
+#define DIBUJAR_TODO_RELOJ_A(_clock_act, _clock_ant, h, m, s, d, mes, a, sel) \
+    do                                                                        \
+    {                                                                         \
+        if (sel == 0)                                                         \
+            DIBUJAR_HORA_B(h, _clock_act->hr, _clock_ant->hr)                 \
+        else                                                                  \
+            DIBUJAR_HORA(h, _clock_act->hr, _clock_ant->hr);                  \
+        if (sel == 1)                                                         \
+            DIBUJAR_HORA_B(m, _clock_act->min, _clock_ant->min)               \
+        else                                                                  \
+            DIBUJAR_HORA(m, _clock_act->min, _clock_ant->min)                 \
+        if (sel == 2)                                                         \
+            DIBUJAR_HORA_B(s, _clock_act->sec, _clock_ant->sec)               \
+        else                                                                  \
+            DIBUJAR_HORA(s, _clock_act->sec, _clock_ant->sec)                 \
+        if (sel == 3)                                                         \
+            DIBUJAR_HORA_B(d, _clock_act->day, _clock_ant->day)               \
+        else                                                                  \
+            DIBUJAR_HORA(d, _clock_act->day, _clock_ant->day);                \
+        if (sel == 4)                                                         \
+            DIBUJAR_MES_B(mes, _clock_act->month, _clock_ant->month)          \
+        else                                                                  \
+            DIBUJAR_MES(mes, _clock_act->month, _clock_ant->month);           \
+        DIBUJAR_YEAR(a, _clock_act->year, _clock_ant->year);                  \
+    } while (0)
+
+#define MASCARA_A_POSICION(mascara) ((mascara == 1) ? 0 : (mascara == 2) ? 1 \
+                                                      : (mascara == 4)   ? 2 \
+                                                      : (mascara == 8)   ? 3 \
+                                                      : (mascara == 16)  ? 4 \
+                                                      : (mascara == 32)  ? 5 \
+                                                      : (mascara == 64)  ? 6 \
+                                                      : (mascara == 128) ? 7 \
+                                                                         : -1)
 
 typedef struct display_task
 {
