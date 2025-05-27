@@ -77,6 +77,15 @@
         _DIBUJAR_YEAR(panel_base, miles, centenas, decenas, unidades);         \
     }
 
+#define DIBUJAR_YEAR_B(panel_base, year_ac, year_ant)                          \
+    {                                                                          \
+        int miles = EXTRAER_MILES(year_ac);                                    \
+        int centenas = EXTRAER_CENTENAS(RESTO_MILES(year_ac));                 \
+        int decenas = EXTRAER_DECENAS(RESTO_CENTENAS(RESTO_MILES(year_ac)));   \
+        int unidades = EXTRAER_UNIDADES(RESTO_CENTENAS(RESTO_MILES(year_ac))); \
+        _DIBUJAR_YEAR_B(panel_base, miles, centenas, decenas, unidades);       \
+    }
+
 /**
  * @brief Internal macro to draw individual year digits.
  * @param panel_base The base panel for drawing digits.
@@ -91,6 +100,19 @@
     DibujarDigito(panel_base, 1, centena);                      \
     DibujarDigito(panel_base, 0, mil);
 
+#define _DIBUJAR_YEAR_B(panel_base, mil, centena, decena, unidad) \
+    for (int i = 0; i < 1; ++i)                                   \
+    {                                                             \
+        BorrarDigito(panel_base, 3);                              \
+        BorrarDigito(panel_base, 2);                              \
+        BorrarDigito(panel_base, 1);                              \
+        BorrarDigito(panel_base, 0);                              \
+        vTaskDelay(pdMS_TO_TICKS(100));                           \
+        DibujarDigito(panel_base, 3, unidad);                     \
+        DibujarDigito(panel_base, 2, decena);                     \
+        DibujarDigito(panel_base, 1, centena);                    \
+        DibujarDigito(panel_base, 0, mil);                        \
+    }
 /**
  * @brief Macro to draw a 2-digit hour on a display panel.
  * @param panel_base The base panel for drawing digits.
@@ -169,7 +191,7 @@
         DIBUJAR_YEAR(a, _clock_act.year, _clock_ant.year);             \
     } while (0)
 
-    /**
+/**
  * @brief Macro to draw the entire clock display with a selected blinking segment.
  * @param _clock_act The current clock time (`time_clock` struct).
  * @param _clock_ant The previous clock time (`time_clock` struct).
@@ -181,7 +203,7 @@
  * @param a Panel for year.
  * @param sel The index of the segment to blink (0 for hours, 1 for minutes, etc.).
  */
-#define DIBUJAR_TODO_RELOJ_B(_clock_act, _clock_ant, h, m, s, d, mes, a, sel) \
+#define DIBUJAR_TODO_RELOJ_A(_clock_act, _clock_ant, h, m, s, d, mes, a, sel) \
     do                                                                        \
     {                                                                         \
         if (sel == 0)                                                         \
@@ -204,11 +226,12 @@
             DIBUJAR_MES(mes, _clock_act.month, _clock_ant.month)              \
         else                                                                  \
             DIBUJAR_MES(mes, _clock_act.month, _clock_ant.month);             \
-        DIBUJAR_YEAR(a, _clock_act.year, _clock_ant.year);                    \
+            if (sel == 5) DIBUJAR_YEAR_B(a, _clock_act.year, _clock_ant.year);                    \
+            else DIBUJAR_YEAR(a, _clock_act.year, _clock_ant.year);  \
     } while (0)
 
-    /**
- * @brief Macro to draw the entire clock display for alarm configuration with a selected blinking segment.
+/**
+ * @brief Macro to draw the entire clock display for alarm configuration  and clock configutarion with a selected blinking segment.
  * @param _clock_act Pointer to the current alarm time (`time_clock` struct).
  * @param _clock_ant Pointer to the previous alarm time (`time_clock` struct).
  * @param h Panel for hours.
@@ -219,7 +242,7 @@
  * @param a Panel for year.
  * @param sel The index of the segment to blink (0 for hours, 1 for minutes, etc.).
  */
-#define DIBUJAR_TODO_RELOJ_A(_clock_act, _clock_ant, h, m, s, d, mes, a, sel) \
+#define DIBUJAR_TODO_RELOJ_B(_clock_act, _clock_ant, h, m, s, d, mes, a, sel) \
     do                                                                        \
     {                                                                         \
         if (sel == 0)                                                         \
@@ -242,9 +265,9 @@
             DIBUJAR_MES_B(mes, _clock_act->month, _clock_ant->month)          \
         else                                                                  \
             DIBUJAR_MES(mes, _clock_act->month, _clock_ant->month);           \
-        DIBUJAR_YEAR(a, _clock_act->year, _clock_ant->year);                  \
+            if (sel == 5) DIBUJAR_YEAR_B(a, _clock_act->year, _clock_ant->year);                    \
+            else DIBUJAR_YEAR(a, _clock_act->year, _clock_ant->year);  \
     } while (0)
-
 
 /**
  * @brief Converts a bitmask (power of 2) to its corresponding position (0-indexed).
@@ -260,20 +283,19 @@
                                                       : (mascara == 128) ? 7 \
                                                                          : -1)
 
-
 /**
  * @brief Structure to hold parameters for the display task.
  */
 typedef struct display_task
 {
-    QueueHandle_t qcrono;        /**< Queue handle for stopwatch time data. */
-    QueueHandle_t qclock;        /**< Queue handle for current clock time data. */
-    QueueHandle_t qalarm;        /**< Queue handle for alarm time configuration data. */
-    QueueHandle_t qconf;         /**< Queue handle for clock configuration data (e.g., selected segment). */
+    QueueHandle_t qcrono;           /**< Queue handle for stopwatch time data. */
+    QueueHandle_t qclock;           /**< Queue handle for current clock time data. */
+    QueueHandle_t qalarm;           /**< Queue handle for alarm time configuration data. */
+    QueueHandle_t qconf;            /**< Queue handle for clock configuration data (e.g., selected segment). */
     EventGroupHandle_t event_group; /**< Event group for mode changes and display specific events. */
-    uint8_t parcial_bits;      /**< Event bitmask for triggering partial (lap) time display. */
-    uint32_t reset_bits;       /**< Event bitmask for triggering a display reset. */
-    int selected;              /**< Initial selected item for display configuration. */
+    uint8_t parcial_bits;           /**< Event bitmask for triggering partial (lap) time display. */
+    uint32_t reset_bits;            /**< Event bitmask for triggering a display reset. */
+    int selected;                   /**< Initial selected item for display configuration. */
 } display_task;
 
 /**

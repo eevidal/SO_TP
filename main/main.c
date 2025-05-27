@@ -238,7 +238,7 @@ void contar_segundos(void *args)
     QueueHandle_t qHandle = clock_p->handler_clock;
     QueueHandle_t qHandle_alarm = clock_p->handler_alarm;
     QueueHandle_t qconf = clock_p->handler_conf;
-    int select;
+    clock_settings_t conf;
 
     lastEvent = xTaskGetTickCount();
     while (1)
@@ -253,8 +253,9 @@ void contar_segundos(void *args)
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK_CONF:
-            select = clock_p->selected;
-            xQueueSend(qconf,&select, pdMS_TO_TICKS(2));
+            conf->select = clock_p->selected;
+            conf->t = clock_p->clock;
+            xQueueSend(qconf, &conf, pdMS_TO_TICKS(2));
         case MODO_CLOCK:
             xQueueSend(qHandle, clock, pdMS_TO_TICKS(2)); // MODO CLOCK, envío el tiempo a la pantalla
             break;
@@ -291,8 +292,9 @@ void tarea_b1(void *args)
 {
     clock_task_t clock_p = (clock_task_t)args;
     EventGroupHandle_t _event_group = clock_p->event_group;
-    QueueHandle_t qHandle_campo = clock_p->handler_conf;
-    int selected;
+    QueueHandle_t qconf = clock_p->handler_conf;
+    QueueHandle_t qalarm = clock_p->handler_alarm;
+    clock_settings_t conf;
 
     while (1)
     {
@@ -309,8 +311,9 @@ void tarea_b1(void *args)
                     printbin(wBits);
                     clock_p->selected = (clock_p->selected + 1) % 6;
                     xEventGroupClearBits(_event_group, BOTON_1);
-                    selected = clock_p->selected;
-                    xQueueSend(qHandle_campo, &selected, pdMS_TO_TICKS(0));
+                    conf->select = clock_p->selected;
+                    conf->t = clock_p->clock;
+                    xQueueSend(qconf, &conf, pdMS_TO_TICKS(0));
                 }
                 break;
             case MODO_ALARM_CONF:
@@ -321,8 +324,9 @@ void tarea_b1(void *args)
                     printbin(wBits);
                     clock_p->alarm->select = (clock_p->alarm->select + 1) % 6;
                     xEventGroupClearBits(_event_group, BOTON_1);
-                    selected = clock_p->alarm->select;
-                    xQueueSend(qHandle_campo, &selected, pdMS_TO_TICKS(0));
+                    conf->select = clock_p->alarm->select;
+                    conf->t = clock_p->alarm->t;
+                    xQueueSend(qalarm, &conf, pdMS_TO_TICKS(0));
                 }
                 break;
 
@@ -355,8 +359,6 @@ void tarea_b1(void *args)
     }
 }
 
-
-
 /**
  * @brief FreeRTOS task handling Button 2 (`BOTON_BORRAR`).
  *
@@ -375,6 +377,7 @@ void tarea_b2(void *args)
     EventGroupHandle_t _event_group = clock_p->event_group;
     QueueHandle_t qHandle_clock = clock_p->handler_clock;
     QueueHandle_t qHandle_alarm = clock_p->handler_alarm;
+    clock_settings_t conf;
     while (1)
     {
 
@@ -391,9 +394,9 @@ void tarea_b2(void *args)
                     ESP_LOGI(TAG, "¡B2!");
                     printbin(wBits);
                     clock_decrementar_campo(clock_p->clock, clock_p->selected);
-                    ESP_LOGI(TAG, "decrementa : %d", clock_p->clock->hr);
-                    xEventGroupClearBits(_event_group, BOTON_2);
-                    xQueueSend(qHandle_clock, clock_p->clock, pdMS_TO_TICKS(10));
+                    conf->select = clock_p->selected;
+                    conf->t = clock_p->clock;
+                    xQueueSend(qHandle_clock, &conf, pdMS_TO_TICKS(10));
                 }
                 break;
 
@@ -413,20 +416,20 @@ void tarea_b2(void *args)
                     clock_p->alarm_seted = !clock_p->alarm_seted;
                     xEventGroupClearBits(_event_group, MODO_ALARM);
                     xEventGroupClearBits(_event_group, BOTON_2);
-                        xEventGroupClearBits(_event_group, BLINK);
+                    xEventGroupClearBits(_event_group, BLINK);
                     switch (clock_p->modo)
                     {
                     case CLOCK:
                         xEventGroupSetBits(_event_group, MODO_CLOCK);
-                    
+
                         break;
                     case CLOCK_CONF:
                         xEventGroupSetBits(_event_group, MODO_CLOCK_CONF);
-                 
+
                         break;
                     case ALARM_CONF:
                         xEventGroupSetBits(_event_group, MODO_ALARM_CONF);
-                   
+
                         break;
                     case CRONO:
                         xEventGroupSetBits(_event_group, MODO_CRONO);
@@ -460,7 +463,6 @@ void tarea_b2(void *args)
     }
 }
 
-
 /**
  * @brief FreeRTOS task handling Button 3 (`BOTON_PARCIAL`).
  *
@@ -479,6 +481,7 @@ void tarea_b3(void *args)
     EventGroupHandle_t _event_group = clock_p->event_group;
     QueueHandle_t qHandle = clock_p->handler_clock;
     QueueHandle_t qHandle_alarm = clock_p->handler_alarm;
+    clock_settings_t conf;
 
     while (1)
     {
@@ -491,7 +494,9 @@ void tarea_b3(void *args)
             {
                 clock_incrementar_campo(clock_p->clock, clock_p->selected);
                 xEventGroupClearBits(_event_group, BOTON_3);
-                xQueueSend(qHandle, clock_p->clock, pdMS_TO_TICKS(10));
+                conf->select = clock_p->selected;
+                conf->t = clock_p->clock;
+                xQueueSend(qHandle, &conf, pdMS_TO_TICKS(10));
             }
 
             break;
@@ -507,15 +512,15 @@ void tarea_b3(void *args)
                 {
                 case CLOCK:
                     xEventGroupSetBits(_event_group, MODO_CLOCK);
-                    
+
                     break;
                 case CLOCK_CONF:
                     xEventGroupSetBits(_event_group, MODO_CLOCK_CONF);
-         
+
                     break;
                 case ALARM_CONF:
                     xEventGroupSetBits(_event_group, MODO_ALARM_CONF);
-             
+
                     break;
                 case CRONO:
                     xEventGroupSetBits(_event_group, MODO_CRONO);
@@ -678,18 +683,18 @@ void dispara_alarma(void *args)
                 {
                 case MODO_CLOCK:
                     clock_p->modo = CLOCK;
-                   
+
                     break;
                 case MODO_CLOCK_CONF:
                     clock_p->modo = CLOCK_CONF;
-            
+
                     break;
                 case MODO_CRONO:
                     clock_p->modo = CRONO;
-                  
+
                     break;
                 case MODO_ALARM_CONF:
-               
+
                     clock_p->modo = ALARM_CONF;
                     break;
                 default:
@@ -738,7 +743,7 @@ void app_main(void)
 
     uint8_t buffer_display_c[QUEUE_LENGTH_C * sizeof(time_clock)];
     uint8_t buffer_display_a[QUEUE_LENGTH_C * sizeof(clock_settings)];
-    uint8_t buffer_display_conf[QUEUE_LENGTH_C * sizeof(int)];
+    uint8_t buffer_display_conf[QUEUE_LENGTH_C * sizeof(clock_settings)];
 
     QueueHandle_t q_crono = xQueueCreateStatic(QUEUE_LENGTH,
                                                ITEM_SIZE,
@@ -750,7 +755,7 @@ void app_main(void)
                                                &xDisplayQueue_clock);
 
     QueueHandle_t q_clock_conf = xQueueCreateStatic(QUEUE_LENGTH_C,
-                                                    sizeof(int),
+                                                    sizeof(clock_settings),
                                                     buffer_display_conf,
                                                     &xDisplayQueue_clock_config);
     QueueHandle_t q_alarm = xQueueCreateStatic(QUEUE_LENGTH_C,

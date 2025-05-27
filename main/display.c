@@ -141,6 +141,12 @@ void dibujar_pantalla(void *args)
         {0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0}};
 
+    clock_settings _clock, _clock_ant;
+    _clock.t = &(_clock[0]);
+    _clock.select = 0;
+    _clock_ant.t = &(_clock_ant[0]);
+    _clock_ant.select = 0;    
+
     clock_settings _alarm, _alarm_ant;
     _alarm.t = &(_clock[1]);
     _alarm.select = 0;
@@ -202,11 +208,11 @@ void dibujar_pantalla(void *args)
                 CLOCK_RESET_PANTALLA();
                 xEventGroupClearBits(_event_group, CAMBIO_MODO);
             }
-            if (xQueueReceive(qconf, &(clock_select), (TickType_t)5) == pdPASS)
-                if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)5) == pdPASS)
+   
+                if (xQueueReceive(queue_clock, &(_clock), (TickType_t)5) == pdPASS)
                 {
-                    DIBUJAR_TODO_RELOJ_B(_clock[0], _clock_ant[0], rhoras, rminutos, rsegundos, rdia, rmes, ryear, clock_select);
-                    _clock_ant[0] = _clock[0];
+                    DIBUJAR_TODO_RELOJ_B(_clock.t, _clock_ant.t, rhoras, rminutos, rsegundos, rdia, rmes, ryear, _clock.select);
+                    _clock_ant.t = _clock.t;
                 }
             break;
         case MODO_ALARM:
@@ -226,7 +232,7 @@ void dibujar_pantalla(void *args)
 
             if (xQueueReceive(alarm_clock, &(_alarm), (TickType_t)5) == pdPASS)
             {
-                DIBUJAR_TODO_RELOJ_A(_alarm.t, _alarm_ant.t, rhoras, rminutos, rsegundos, rdia, rmes, ryear, _alarm.select);
+                DIBUJAR_TODO_RELOJ_B(_alarm.t, _alarm_ant.t, rhoras, rminutos, rsegundos, rdia, rmes, ryear, _alarm.select);
                 _alarm_ant.t = _alarm.t;
             }
             break;
