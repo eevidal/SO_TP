@@ -67,6 +67,17 @@
         ILI9341DrawFilledCircle(150, 35, 3, DIGITO_ENCENDIDO); \
     } while (0);
 
+    int is_one2(long n, int b)
+    {
+        return (n >> b) & 1;
+    }
+
+void printbin2(unsigned long n)
+{
+    for (int b = 31; b >= 0; b--)
+        printf("%d", is_one2(n, b));
+    printf("\n");
+}
 
 void dibujar_pantalla(void *args)
 {
@@ -102,25 +113,19 @@ void dibujar_pantalla(void *args)
     time_clock _clock[2] = {
         {0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0}};
-
-
-    clock_settings _clock, _clock_ant;
-    _clock.t = &(_clock[0]);
-    _clock.select = 0;
-    _clock_ant.t = &(_clock[0]);
-    _clock_ant.select = 0;    
+    time_clock _clock_ant[2] = {
+        {0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0}};
 
     clock_settings _alarm, _alarm_ant;
     _alarm.t = &(_clock[1]);
     _alarm.select = 0;
-    _alarm_ant.t = &(_clock[1]);
+    _alarm_ant.t = &(_clock_ant[1]);
     _alarm_ant.select = 0;
 
     int clock_select = 0;
     bool alarm_set = false;
     int mod;
-
-
     ILI9341Init();
     ILI9341Rotate(ILI9341_Portrait_2);
 
@@ -148,10 +153,8 @@ void dibujar_pantalla(void *args)
     while (1)
     {
         EventBits_t wBits = xEventGroupWaitBits(_event_group, CAMBIO_MODO | event_bits, pdFALSE, pdFALSE, (TickType_t)1);
-        //Muestra el modo de operación
         mod = (wBits & (MODOS));
         DibujarDigito(estado,0,MASCARA_A_POSICION(mod>>9));
-       
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK:
@@ -163,8 +166,8 @@ void dibujar_pantalla(void *args)
             }
             if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)5) == pdPASS)
             {
-                DIBUJAR_TODO_RELOJ_B(_clock.t, _clock_ant.t, rhoras, rminutos, rsegundos, rdia, rmes, ryear, _clock.select);
-                _alarm_ant.t = _alarm.t;
+                DIBUJAR_TODO_RELOJ(_clock[0], _clock_ant[0], rhoras, rminutos, rsegundos, rdia, rmes, ryear);
+                _clock_ant[0] = _clock[0];
             }
             break;
         case MODO_CLOCK_CONF:
@@ -177,8 +180,8 @@ void dibujar_pantalla(void *args)
 
             if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)5) == pdPASS)
             {
-                DIBUJAR_TODO_RELOJ_B(_clock.t, _clock_ant.t, rhoras, rminutos, rsegundos, rdia, rmes, ryear, _clock.select);
-                _alarm_ant.t = _alarm.t;
+                DIBUJAR_TODO_RELOJ(_clock[0], _clock_ant[0], rhoras, rminutos, rsegundos, rdia, rmes, ryear);
+                _clock_ant[0] = _clock[0];
             }
             break;
         case MODO_ALARM:
@@ -188,18 +191,24 @@ void dibujar_pantalla(void *args)
                 CLOCK_RESET_PANTALLA();
                 xEventGroupClearBits(_event_group, CAMBIO_MODO);
             }
-
+           /* if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)5) == pdPASS)
+            {
+                DIBUJAR_TODO_RELOJ_A(_clock[1], _clock_ant[1], rhoras, rminutos, rsegundos, rdia, rmes, ryear);
+                _clock_ant[1] = _clock[1];
+            }*/
             break;
         case MODO_ALARM_CONF:
             if ((wBits & CAMBIO_MODO) != 0)
             {
+                printbin2(wBits);
+                //   RESET_CLOCK_ANT_0();
                 CLOCK_RESET_PANTALLA();
                 xEventGroupClearBits(_event_group, CAMBIO_MODO);
             }
 
             if (xQueueReceive(alarm_clock, &(_alarm), (TickType_t)5) == pdPASS)
             {
-                DIBUJAR_TODO_RELOJ_B(_alarm.t, _alarm_ant.t, rhoras, rminutos, rsegundos, rdia, rmes, ryear, _alarm.select);
+                DIBUJAR_TODO_RELOJ_A(_alarm.t, _alarm_ant.t, rhoras, rminutos, rsegundos, rdia, rmes, ryear, _alarm.select);
                 _alarm_ant.t = _alarm.t;
             }
             break;
@@ -243,6 +252,8 @@ void dibujar_pantalla(void *args)
 
                 if ((wBits & parcial_bits) != 0)
                 {
+                    printbin2(wBits);
+                    printbin2(parcial_bits);
                     guardados < 3 ? guardados++ : guardados;
                     int i;
                     for (i = guardados; i > 1; i--)

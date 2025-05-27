@@ -97,6 +97,32 @@
     do                                                                        \
     {                                                                         \
         if (sel == 0)                                                         \
+            DIBUJAR_HORA_B(h, _clock_act.hr, _clock_ant.hr)                   \
+        else                                                                  \
+            DIBUJAR_HORA(h, _clock_act.hr, _clock_ant.hr);                    \
+        if (sel == 1)                                                         \
+            DIBUJAR_HORA_B(m, _clock_act.min, _clock_ant.min)                 \
+        else                                                                  \
+            DIBUJAR_HORA(m, _clock_act.min, _clock_ant.min);                  \
+        if (sel == 2)                                                         \
+            DIBUJAR_HORA_B(s, _clock_act.sec, _clock_ant.sec)                 \
+        else                                                                  \
+            DIBUJAR_HORA(s, _clock_act.sec, _clock_ant.sec);                  \
+        if (sel == 3)                                                         \
+            DIBUJAR_HORA_B(d, _clock_act.day, _clock_ant.day)                 \
+        else                                                                  \
+            DIBUJAR_HORA(d, _clock_act.day, _clock_ant.day);                  \
+        if (sel == 4)                                                         \
+            DIBUJAR_MES(mes, _clock_act.month, _clock_ant.month)              \
+        else                                                                  \
+            DIBUJAR_MES(mes, _clock_act.month, _clock_ant.month);             \
+        DIBUJAR_YEAR(a, _clock_act.year, _clock_ant.year);                    \
+    } while (0)
+
+#define DIBUJAR_TODO_RELOJ_A(_clock_act, _clock_ant, h, m, s, d, mes, a, sel) \
+    do                                                                        \
+    {                                                                         \
+        if (sel == 0)                                                         \
             DIBUJAR_HORA_B(h, _clock_act->hr, _clock_ant->hr)                 \
         else                                                                  \
             DIBUJAR_HORA(h, _clock_act->hr, _clock_ant->hr);                  \
