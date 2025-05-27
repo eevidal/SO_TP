@@ -3,6 +3,9 @@
 #include "mode_op.h"
 #include "stdio.h"
 
+/**
+ * @brief Resets the previous clock time array to zero for display updates.
+ */
 #define RESET_CLOCK_ANT_0()      \
     do                           \
     {                            \
@@ -14,12 +17,23 @@
         _clock_ant[0].year = 0;  \
     } while (0)
 
+/**
+ * @brief Draws a partial time (hundreds, tens, units, tenths) on the display.
+ * @param panel_base The base panel for drawing integer parts.
+ * @param centena The hundreds digit.
+ * @param decena The tens digit.
+ * @param unidad The units digit.
+ * @param decima The tenths digit (requires a separate panel_t for decimals, suffixed with `_d`).
+ */    
 #define DIBUJAR_PARCIAL(panel_base, centena, decena, unidad, decima) \
     DibujarDigito(panel_base, 2, unidad);                            \
     DibujarDigito(panel_base, 1, decena);                            \
     DibujarDigito(panel_base, 0, centena);                           \
     DibujarDigito(panel_base##_d, 0, decima);
 
+    /**
+ * @brief Macro to reset the stopwatch display to its initial state (all zeros) and redraw static elements.
+ */
 #define CRONO_RESET_PANTALLA()                                  \
     do                                                          \
     {                                                           \
@@ -35,6 +49,9 @@
         DIBUJA_PARCIALES();                                     \
     } while (0);
 
+/**
+ * @brief Macro to draw all three partial (lap) times on the display.
+ */
 #define DIBUJA_PARCIALES()                                     \
     {                                                          \
         DIBUJAR_PARCIAL(parcial1, parcial[0].centena,          \
@@ -47,7 +64,9 @@
                         parcial[2].decena,                     \
                         parcial[2].unidad, parcial[2].decima); \
     }
-
+/**
+ * @brief Macro to reset the clock/alarm display to its initial state (all zeros) and redraw static elements.
+ */
 #define CLOCK_RESET_PANTALLA()                                 \
     do                                                         \
     {                                                          \
@@ -64,7 +83,25 @@
         ILI9341DrawFilledCircle(150, 35, 3, DIGITO_ENCENDIDO); \
     } while (0);
 
-
+/**
+ * @brief FreeRTOS task to manage and update the display based on different operational modes.
+ *
+ * This task acts as the central display controller. It receives data from various queues
+ * (stopwatch, clock, alarm, configuration) and events from an Event Group to determine
+ * which information to display and in what format.
+ *
+ * It supports different display modes:
+ * - **Clock Mode:** Shows the current time (hours, minutes, seconds, day, month, year).
+ * - **Clock Configuration Mode:** Allows setting the clock, with the currently selected
+ * segment (e.g., hours, minutes) blinking.
+ * - **Alarm Mode:** (Currently commented out in the provided code, but structured to display alarm time).
+ * - **Alarm Configuration Mode:** Allows setting the alarm time, with the selected segment blinking.
+ * - **Stopwatch Mode:** Displays stopwatch time (seconds and tenths of seconds) and
+ * up to three partial (lap) times. It also handles resetting the stopwatch display
+ * and recording lap times.
+ *  @param args A pointer to a `display_task_t` structure containing all the necessary
+ * queue handles, event group handle, and bitmasks for task operation.
+ */
 void dibujar_pantalla(void *args)
 {
     int guardados = 0;
@@ -113,6 +150,7 @@ void dibujar_pantalla(void *args)
     int clock_select = 0;
     bool alarm_set = false;
     int mod;
+
     ILI9341Init();
     ILI9341Rotate(ILI9341_Portrait_2);
 
@@ -178,11 +216,6 @@ void dibujar_pantalla(void *args)
                 CLOCK_RESET_PANTALLA();
                 xEventGroupClearBits(_event_group, CAMBIO_MODO);
             }
-            /* if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)5) == pdPASS)
-             {
-                 DIBUJAR_TODO_RELOJ_A(_clock[1], _clock_ant[1], rhoras, rminutos, rsegundos, rdia, rmes, ryear);
-                 _clock_ant[1] = _clock[1];
-             }*/
             break;
         case MODO_ALARM_CONF:
             if ((wBits & CAMBIO_MODO) != 0)
