@@ -31,12 +31,9 @@
         ILI9341DrawFilledCircle(178, 95, 5, DIGITO_ENCENDIDO);  \
         ILI9341DrawFilledCircle(113, 160, 5, DIGITO_ENCENDIDO); \
         ILI9341DrawFilledCircle(145, 220, 5, DIGITO_ENCENDIDO); \
-        ILI9341DrawFilledCircle(178, 280, 5, DIGITO_ENCENDIDO);\
-        DIBUJA_PARCIALES();\
-}while (0);
-
-
-
+        ILI9341DrawFilledCircle(178, 280, 5, DIGITO_ENCENDIDO); \
+        DIBUJA_PARCIALES();                                     \
+    } while (0);
 
 #define DIBUJA_PARCIALES()                                     \
     {                                                          \
@@ -49,7 +46,7 @@
         DIBUJAR_PARCIAL(parcial3, parcial[2].centena,          \
                         parcial[2].decena,                     \
                         parcial[2].unidad, parcial[2].decima); \
-}
+    }
 
 #define CLOCK_RESET_PANTALLA()                                 \
     do                                                         \
@@ -67,10 +64,10 @@
         ILI9341DrawFilledCircle(150, 35, 3, DIGITO_ENCENDIDO); \
     } while (0);
 
-    int is_one2(long n, int b)
-    {
-        return (n >> b) & 1;
-    }
+int is_one2(long n, int b)
+{
+    return (n >> b) & 1;
+}
 
 void printbin2(unsigned long n)
 {
@@ -87,6 +84,7 @@ void dibujar_pantalla(void *args)
     QueueHandle_t queue_crono = display_arg->qcrono;
     QueueHandle_t queue_clock = display_arg->qclock;
     QueueHandle_t alarm_clock = display_arg->qalarm;
+    QueueHandle_t qconf = display_arg->qconf;
     int sel = display_arg->selected;
     bool set_alarm = display_arg->selected;
     uint8_t reset_bits = display_arg->reset_bits;
@@ -149,12 +147,12 @@ void dibujar_pantalla(void *args)
 
     panel_t estado = CrearPanel(10, 258, 1, DIGITO_ALTO_E, DIGITO_ANCHO_E, DIGITO_ENCENDIDO_Y, DIGITO_APAGADO, DIGITO_FONDO);
 
-    CLOCK_RESET_PANTALLA(); 
+    CLOCK_RESET_PANTALLA();
     while (1)
     {
         EventBits_t wBits = xEventGroupWaitBits(_event_group, CAMBIO_MODO | event_bits, pdFALSE, pdFALSE, (TickType_t)1);
         mod = (wBits & (MODOS));
-        DibujarDigito(estado,0,MASCARA_A_POSICION(mod>>9));
+        DibujarDigito(estado, 0, MASCARA_A_POSICION(mod >> 9));
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK:
@@ -177,12 +175,12 @@ void dibujar_pantalla(void *args)
                 CLOCK_RESET_PANTALLA();
                 xEventGroupClearBits(_event_group, CAMBIO_MODO);
             }
-
-            if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)5) == pdPASS)
-            {
-                DIBUJAR_TODO_RELOJ(_clock[0], _clock_ant[0], rhoras, rminutos, rsegundos, rdia, rmes, ryear);
-                _clock_ant[0] = _clock[0];
-            }
+            if (xQueueReceive(qconf, &(clock_select), (TickType_t)5) == pdPASS)
+                if (xQueueReceive(queue_clock, &(_clock[0]), (TickType_t)5) == pdPASS)
+                {
+                    DIBUJAR_TODO_RELOJ_B(_clock[0], _clock_ant[0], rhoras, rminutos, rsegundos, rdia, rmes, ryear, clock_select);
+                    _clock_ant[0] = _clock[0];
+                }
             break;
         case MODO_ALARM:
             if ((wBits & CAMBIO_MODO) != 0)
@@ -191,11 +189,11 @@ void dibujar_pantalla(void *args)
                 CLOCK_RESET_PANTALLA();
                 xEventGroupClearBits(_event_group, CAMBIO_MODO);
             }
-           /* if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)5) == pdPASS)
-            {
-                DIBUJAR_TODO_RELOJ_A(_clock[1], _clock_ant[1], rhoras, rminutos, rsegundos, rdia, rmes, ryear);
-                _clock_ant[1] = _clock[1];
-            }*/
+            /* if (xQueueReceive(queue_clock, &(_clock[1]), (TickType_t)5) == pdPASS)
+             {
+                 DIBUJAR_TODO_RELOJ_A(_clock[1], _clock_ant[1], rhoras, rminutos, rsegundos, rdia, rmes, ryear);
+                 _clock_ant[1] = _clock[1];
+             }*/
             break;
         case MODO_ALARM_CONF:
             if ((wBits & CAMBIO_MODO) != 0)
