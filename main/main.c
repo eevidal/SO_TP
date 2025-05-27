@@ -85,7 +85,7 @@ typedef struct clock_task
     bool alarm_seted;
     EventGroupHandle_t event_group;
     int selected; // 0 -> hr, 1-> min, 2-> seg , 3 -> dia, 4->mes, 5 -> año
-    QueueHandle_t handler_clock, handler_alarm, handler_crono, handler_conf;
+    QueueHandle_t handler_clock, handler_alarm, handler_crono;
     modos_t modo;
 } clock_task;
 
