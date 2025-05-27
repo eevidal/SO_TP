@@ -6,7 +6,7 @@ El modo actual es parte del estado del sistema -> Una tarea actualizará el modo
 
 
 El botón 4 cambiará el modo
-Reloj ->Reloj Config ->Alarma Config-> Crónometro  //el modo alarma cambia al sonar la alarma
+Reloj ->Reloj Config ->Alarma Config-> Crónometro -> Reloj  //el modo alarma cambia al sonar la alarma
 Dependiendo del modo cada botón tendrá diferentes comportamientos: 
 
 Boton 1
