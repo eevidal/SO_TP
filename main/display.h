@@ -107,7 +107,7 @@
         BorrarDigito(panel_base, 2);                              \
         BorrarDigito(panel_base, 1);                              \
         BorrarDigito(panel_base, 0);                              \
-        vTaskDelay(pdMS_TO_TICKS(100));                           \
+        vTaskDelay(pdMS_TO_TICKS(50));                            \
         DibujarDigito(panel_base, 3, unidad);                     \
         DibujarDigito(panel_base, 2, decena);                     \
         DibujarDigito(panel_base, 1, centena);                    \
@@ -128,7 +128,7 @@
     {                                                     \
         BorrarDigito(panel_base, 1);                      \
         BorrarDigito(panel_base, 0);                      \
-        vTaskDelay(pdMS_TO_TICKS(100));                   \
+        vTaskDelay(pdMS_TO_TICKS(50));                    \
         DIBUJAR_T(panel_base, hora_ac / 10, hora_ac % 10) \
     }
 
@@ -155,7 +155,7 @@
     {                                                   \
         BorrarDigito(panel_base, 1);                    \
         BorrarDigito(panel_base, 0);                    \
-        vTaskDelay(pdMS_TO_TICKS(100));                 \
+        vTaskDelay(pdMS_TO_TICKS(50));                  \
         DIBUJAR_T(panel_base, mes_ac / 10, mes_ac % 10) \
     }
 
@@ -223,11 +223,13 @@
         else                                                                  \
             DIBUJAR_HORA(d, _clock_act.day, _clock_ant.day);                  \
         if (sel == 4)                                                         \
-            DIBUJAR_MES(mes, _clock_act.month, _clock_ant.month)              \
+            DIBUJAR_MES_B(mes, _clock_act.month, _clock_ant.month)            \
         else                                                                  \
             DIBUJAR_MES(mes, _clock_act.month, _clock_ant.month);             \
-            if (sel == 5) DIBUJAR_YEAR_B(a, _clock_act.year, _clock_ant.year);                    \
-            else DIBUJAR_YEAR(a, _clock_act.year, _clock_ant.year);  \
+        if (sel == 5)                                                         \
+            DIBUJAR_YEAR_B(a, _clock_act.year, _clock_ant.year);              \
+        else                                                                  \
+            DIBUJAR_YEAR(a, _clock_act.year, _clock_ant.year);                \
     } while (0)
 
 /**
@@ -265,8 +267,10 @@
             DIBUJAR_MES_B(mes, _clock_act->month, _clock_ant->month)          \
         else                                                                  \
             DIBUJAR_MES(mes, _clock_act->month, _clock_ant->month);           \
-            if (sel == 5) DIBUJAR_YEAR_B(a, _clock_act->year, _clock_ant->year);                    \
-            else DIBUJAR_YEAR(a, _clock_act->year, _clock_ant->year);  \
+        if (sel == 5)                                                         \
+            DIBUJAR_YEAR_B(a, _clock_act->year, _clock_ant->year)             \
+        else                                                                  \
+            DIBUJAR_YEAR(a, _clock_act->year, _clock_ant->year);              \
     } while (0)
 
 /**
@@ -291,7 +295,7 @@ typedef struct display_task
     QueueHandle_t qcrono;           /**< Queue handle for stopwatch time data. */
     QueueHandle_t qclock;           /**< Queue handle for current clock time data. */
     QueueHandle_t qalarm;           /**< Queue handle for alarm time configuration data. */
-    QueueHandle_t qconf;            /**< Queue handle for clock configuration data (e.g., selected segment). */
+    QueueHandle_t qconf;            /**< Queue handle for clock configuration data  */
     EventGroupHandle_t event_group; /**< Event group for mode changes and display specific events. */
     uint8_t parcial_bits;           /**< Event bitmask for triggering partial (lap) time display. */
     uint32_t reset_bits;            /**< Event bitmask for triggering a display reset. */

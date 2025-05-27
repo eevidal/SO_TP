@@ -238,7 +238,7 @@ void contar_segundos(void *args)
     QueueHandle_t qHandle = clock_p->handler_clock;
     QueueHandle_t qHandle_alarm = clock_p->handler_alarm;
     QueueHandle_t qconf = clock_p->handler_conf;
-    clock_settings_t conf;
+    clock_settings conf;
 
     lastEvent = xTaskGetTickCount();
     while (1)
@@ -253,9 +253,10 @@ void contar_segundos(void *args)
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK_CONF:
-            conf->select = clock_p->selected;
-            conf->t = clock_p->clock;
+            conf.select = clock_p->selected;
+            conf.t = clock_p->clock;
             xQueueSend(qconf, &conf, pdMS_TO_TICKS(2));
+            break;
         case MODO_CLOCK:
             xQueueSend(qHandle, clock, pdMS_TO_TICKS(2)); // MODO CLOCK, envío el tiempo a la pantalla
             break;
@@ -294,7 +295,7 @@ void tarea_b1(void *args)
     EventGroupHandle_t _event_group = clock_p->event_group;
     QueueHandle_t qconf = clock_p->handler_conf;
     QueueHandle_t qalarm = clock_p->handler_alarm;
-    clock_settings_t conf;
+    clock_settings conf;
 
     while (1)
     {
@@ -311,8 +312,8 @@ void tarea_b1(void *args)
                     printbin(wBits);
                     clock_p->selected = (clock_p->selected + 1) % 6;
                     xEventGroupClearBits(_event_group, BOTON_1);
-                    conf->select = clock_p->selected;
-                    conf->t = clock_p->clock;
+                    conf.select = clock_p->selected;
+                    conf.t = clock_p->clock;
                     xQueueSend(qconf, &conf, pdMS_TO_TICKS(0));
                 }
                 break;
@@ -324,8 +325,8 @@ void tarea_b1(void *args)
                     printbin(wBits);
                     clock_p->alarm->select = (clock_p->alarm->select + 1) % 6;
                     xEventGroupClearBits(_event_group, BOTON_1);
-                    conf->select = clock_p->alarm->select;
-                    conf->t = clock_p->alarm->t;
+                    conf.select = clock_p->alarm->select;
+                    conf.t = clock_p->alarm->t;
                     xQueueSend(qalarm, &conf, pdMS_TO_TICKS(0));
                 }
                 break;
@@ -375,9 +376,9 @@ void tarea_b2(void *args)
 {
     clock_task_t clock_p = (clock_task_t)args;
     EventGroupHandle_t _event_group = clock_p->event_group;
-    QueueHandle_t qHandle_clock = clock_p->handler_clock;
     QueueHandle_t qHandle_alarm = clock_p->handler_alarm;
-    clock_settings_t conf;
+    QueueHandle_t qconf = clock_p->handler_conf;
+    clock_settings conf;
     while (1)
     {
 
@@ -394,9 +395,11 @@ void tarea_b2(void *args)
                     ESP_LOGI(TAG, "¡B2!");
                     printbin(wBits);
                     clock_decrementar_campo(clock_p->clock, clock_p->selected);
-                    conf->select = clock_p->selected;
-                    conf->t = clock_p->clock;
-                    xQueueSend(qHandle_clock, &conf, pdMS_TO_TICKS(10));
+                    conf.select = clock_p->selected;
+                    conf.t = clock_p->clock;
+                    xEventGroupClearBits(_event_group, BOTON_2);
+                    xQueueSend(qconf, &conf, pdMS_TO_TICKS(10));
+                    
                 }
                 break;
 
@@ -479,9 +482,9 @@ void tarea_b3(void *args)
 {
     clock_task_t clock_p = (clock_task_t)args;
     EventGroupHandle_t _event_group = clock_p->event_group;
-    QueueHandle_t qHandle = clock_p->handler_clock;
+    QueueHandle_t qHandle = clock_p->handler_conf;
     QueueHandle_t qHandle_alarm = clock_p->handler_alarm;
-    clock_settings_t conf;
+    clock_settings conf;
 
     while (1)
     {
@@ -494,8 +497,8 @@ void tarea_b3(void *args)
             {
                 clock_incrementar_campo(clock_p->clock, clock_p->selected);
                 xEventGroupClearBits(_event_group, BOTON_3);
-                conf->select = clock_p->selected;
-                conf->t = clock_p->clock;
+                conf.select = clock_p->selected;
+                conf.t = clock_p->clock;
                 xQueueSend(qHandle, &conf, pdMS_TO_TICKS(10));
             }
 
@@ -619,7 +622,8 @@ void cambia_modo(void *args)
                 xEventGroupClearBits(_event_group, BOTON_MODO);
                 xEventGroupSetBits(_event_group, CAMBIO_MODO);
                 ESP_LOGI(TAG, "¡CAMBIA A MODO CRONO!");
-                if ((wBits & CUENTA) != 0)
+                EventBits_t current_state_bits = xEventGroupGetBits(_event_group); 
+                if ((current_state_bits & CUENTA) != 0) 
                     xEventGroupSetBits(_event_group, BLINK);
                 else
                     xEventGroupSetBits(_event_group, RED);
@@ -737,7 +741,7 @@ void app_main(void)
     static StaticQueue_t xDisplayQueue_crono;
     static StaticQueue_t xDisplayQueue_alarm;        // clock + campo
     static StaticQueue_t xDisplayQueue_clock;        // clock
-    static StaticQueue_t xDisplayQueue_clock_config; // campo
+    static StaticQueue_t xDisplayQueue_clock_config; // clock + campo
 
     uint8_t buffer_display[QUEUE_LENGTH * ITEM_SIZE];
 

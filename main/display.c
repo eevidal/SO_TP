@@ -24,14 +24,14 @@
  * @param decena The tens digit.
  * @param unidad The units digit.
  * @param decima The tenths digit (requires a separate panel_t for decimals, suffixed with `_d`).
- */    
+ */
 #define DIBUJAR_PARCIAL(panel_base, centena, decena, unidad, decima) \
     DibujarDigito(panel_base, 2, unidad);                            \
     DibujarDigito(panel_base, 1, decena);                            \
     DibujarDigito(panel_base, 0, centena);                           \
     DibujarDigito(panel_base##_d, 0, decima);
 
-    /**
+/**
  * @brief Macro to reset the stopwatch display to its initial state (all zeros) and redraw static elements.
  */
 #define CRONO_RESET_PANTALLA()                                  \
@@ -134,18 +134,20 @@ void dibujar_pantalla(void *args)
 
     /*Estructura para guardar un reloj y alarma*/
     /* clock[0] = reloj, clock[1] = alarma*/
-    time_clock _clock[2] = {
+    time_clock _clock[3] = {
+        {0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0}};
-    time_clock _clock_ant[2] = {
+    time_clock _clock_ant[3] = {
+        {0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0}};
 
-    clock_settings _clock, _clock_ant;
-    _clock.t = &(_clock[0]);
-    _clock.select = 0;
-    _clock_ant.t = &(_clock_ant[0]);
-    _clock_ant.select = 0;    
+    clock_settings _clock_conf, _clock_conf_ant;
+    _clock_conf.t = &(_clock[2]);
+    _clock_conf.select = 0;
+    _clock_conf_ant.t = &(_clock_ant[2]);
+    _clock_conf_ant.select = 0;
 
     clock_settings _alarm, _alarm_ant;
     _alarm.t = &(_clock[1]);
@@ -208,12 +210,12 @@ void dibujar_pantalla(void *args)
                 CLOCK_RESET_PANTALLA();
                 xEventGroupClearBits(_event_group, CAMBIO_MODO);
             }
-   
-                if (xQueueReceive(queue_clock, &(_clock), (TickType_t)5) == pdPASS)
-                {
-                    DIBUJAR_TODO_RELOJ_B(_clock.t, _clock_ant.t, rhoras, rminutos, rsegundos, rdia, rmes, ryear, _clock.select);
-                    _clock_ant.t = _clock.t;
-                }
+
+            if (xQueueReceive(qconf, &(_clock_conf), (TickType_t)5) == pdPASS)
+            {
+                DIBUJAR_TODO_RELOJ_B(_clock_conf.t, _clock_conf_ant.t, rhoras, rminutos, rsegundos, rdia, rmes, ryear, _clock_conf.select);
+                _clock_conf_ant.t = _clock_conf.t;
+            }
             break;
         case MODO_ALARM:
             if ((wBits & CAMBIO_MODO) != 0)
