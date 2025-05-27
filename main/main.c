@@ -193,7 +193,8 @@ void contar_segundos(void *args)
     EventGroupHandle_t _event_group = clock_p->event_group;
     QueueHandle_t qHandle = clock_p->handler_clock;
     QueueHandle_t qHandle_alarm = clock_p->handler_alarm;
-    QueueHandle_t qconf = clock_p->handler_clock_conf;
+    QueueHandle_t qconf = clock_p->handler_conf;
+    int select;
 
     lastEvent = xTaskGetTickCount();
     while (1)
@@ -208,7 +209,8 @@ void contar_segundos(void *args)
         switch (wBits & (MODOS))
         {
         case MODO_CLOCK_CONF:
-            xQueueSend(qconf,clock_p->selected, pdMS_TO_TICKS(10));
+            select = clock_p->selected;
+            xQueueSend(qconf,&select, pdMS_TO_TICKS(10));
         case MODO_CLOCK:
             xQueueSend(qHandle, clock, pdMS_TO_TICKS(10)); // MODO CLOCK, envío el tiempo a la pantalla
             break;
@@ -577,19 +579,18 @@ void dispara_alarma(void *args)
                 {
                 case MODO_CLOCK:
                     clock_p->modo = CLOCK;
-                    xQueueSend(clock_p->qhandler_clock, clock_p->clock, pdMS_TO_TICKS(10));
+                   
                     break;
                 case MODO_CLOCK_CONF:
                     clock_p->modo = CLOCK_CONF;
-                    xQueueSend(clock_p->handler_conf, clock_p->selected, pdMS_TO_TICKS(10));
-                    xQueueSend(clock_p->qhandler_clock, clock_p->clock, pdMS_TO_TICKS(10));
+            
                     break;
                 case MODO_CRONO:
                     clock_p->modo = CRONO;
-                    xQueueSend(clock_p->handler_crono, clock_p->time, pdMS_TO_TICKS(10));
+                  
                     break;
                 case MODO_ALARM_CONF:
-                xQueueSend(clock_p->handler_alarm, clock_p->alarm, pdMS_TO_TICKS(10));
+               
                     clock_p->modo = ALARM_CONF;
                     break;
                 default:
