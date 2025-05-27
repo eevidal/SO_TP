@@ -18,7 +18,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 SPDX-License-Identifier: MIT
 *************************************************************************************************/
-
+/**
+ * @file main.c
+ * @brief Main application file for the ESP32 clock/stopwatch system.
+ *
+ * This file contains the `app_main` function, the entry point for the ESP-IDF application.
+ * It initializes FreeRTOS components like Event Groups and Queues, creates various tasks
+ * responsible for button handling, LED control, timekeeping (clock and stopwatch),
+ * display management, and alarm triggering.
+ *
+ * The system operates across different modes (Clock, Clock Configuration, Alarm,
+ * Alarm Configuration, Stopwatch), managed by an Event Group to facilitate inter-task
+ * communication and synchronization.
+ */
 /* === Headers files inclusions ==================================================================================== */
 
 #include "freertos/FreeRTOS.h"
@@ -66,17 +78,25 @@ SPDX-License-Identifier: MIT
 
 /* === Private data type declarations =============================================================================== */
 
+/**
+ * @brief Structure to hold parameters for the stopwatch (crono) task.
+ */
 typedef struct crono_task
 {
     time_struct_t time;
-
     EventGroupHandle_t event_group;
     QueueHandle_t handler_time;
     int estado;
 } crono_task;
 
+/**
+ * @brief Pointer to the crono_task structure.
+ */
 typedef struct crono_task *crono_task_t;
 
+/**
+ * @brief Structure to hold parameters for the main clock and alarm task.
+ */
 typedef struct clock_task
 {
     time_clock_t clock;
@@ -85,10 +105,12 @@ typedef struct clock_task
     bool alarm_seted;
     EventGroupHandle_t event_group;
     int selected; // 0 -> hr, 1-> min, 2-> seg , 3 -> dia, 4->mes, 5 -> año
-    QueueHandle_t handler_clock, handler_alarm, handler_crono;
+    QueueHandle_t handler_clock, handler_alarm, handler_crono, handler_conf;
     modos_t modo;
 } clock_task;
-
+/**
+ * @brief Pointer to the clock_task structure.
+ */
 typedef struct clock_task *clock_task_t;
 
 /* === Private variable declarations ================================================================================ */
@@ -110,6 +132,16 @@ void printbin(unsigned long n)
 
 /* === Public function implementation =============================================================================== */
 
+/**
+ * @brief FreeRTOS task responsible for counting tenths of seconds for the stopwatch.
+ *
+ * This task increments the stopwatch time every 100 milliseconds. It reacts to
+ * `CUENTA` and `RESET` event bits to start/stop/reset the stopwatch.
+ * It also handles pausing/resuming via `EN_PAUSA` and sends time updates to the
+ * display task via a queue only when in `MODO_CRONO`.
+ *
+ * @param args A pointer to a `crono_task_t` structure containing stopwatch state and queue handles.
+ */
 void contar_decima(void *args)
 {
     crono_task_t cronometro_p = (crono_task_t)args;
@@ -185,6 +217,18 @@ void contar_decima(void *args)
         vTaskDelayUntil(&lastEvent, pdMS_TO_TICKS(100));
     }
 }
+
+/**
+ * @brief FreeRTOS task responsible for maintaining the main system clock.
+ *
+ * This task increments the clock time every second. It checks the Event Group
+ * to see if the system is in a configuration mode (`MODO_CLOCK_CONF` or `MODO_ALARM_CONF`);
+ * if so, it temporarily stops incrementing the clock.
+ * It sends current clock or alarm configuration data to the display task via queues
+ * depending on the current operational mode.
+ *
+ * @param args A pointer to a `clock_task_t` structure containing clock/alarm data and queue handles.
+ */
 void contar_segundos(void *args)
 {
     clock_task_t clock_p = (clock_task_t)args;
@@ -210,14 +254,14 @@ void contar_segundos(void *args)
         {
         case MODO_CLOCK_CONF:
             select = clock_p->selected;
-            xQueueSend(qconf,&select, pdMS_TO_TICKS(10));
+            xQueueSend(qconf,&select, pdMS_TO_TICKS(2));
         case MODO_CLOCK:
-            xQueueSend(qHandle, clock, pdMS_TO_TICKS(10)); // MODO CLOCK, envío el tiempo a la pantalla
+            xQueueSend(qHandle, clock, pdMS_TO_TICKS(2)); // MODO CLOCK, envío el tiempo a la pantalla
             break;
         case MODO_CRONO:
             break;
         case MODO_ALARM_CONF:
-            xQueueSend(qHandle_alarm, clock_p->alarm, pdMS_TO_TICKS(10));
+            xQueueSend(qHandle_alarm, clock_p->alarm, pdMS_TO_TICKS(2));
             break;
         case MODO_ALARM:
             ESP_LOGI(TAG_ALARM, "¡ALARMA SONANDO!");
@@ -232,6 +276,17 @@ void contar_segundos(void *args)
     }
 }
 
+/**
+ * @brief FreeRTOS task handling Button 1 (`BOTON_ESTADO`).
+ *
+ * This task responds to presses of Button 1. Its functionality varies based on
+ * the current operational mode:
+ * - In **Clock Configuration** mode: Cycles through the selectable time fields (hour, minute, etc.).
+ * - In **Alarm Configuration** mode: Cycles through the selectable alarm time fields.
+ * - In **Stopwatch** mode: Toggles between running and paused states for the stopwatch.
+ *
+ * @param args A pointer to a `clock_task_t` structure for accessing clock/alarm data and event group.
+ */
 void tarea_b1(void *args)
 {
     clock_task_t clock_p = (clock_task_t)args;
@@ -300,7 +355,20 @@ void tarea_b1(void *args)
     }
 }
 
-// void borrar(void *args)
+
+
+/**
+ * @brief FreeRTOS task handling Button 2 (`BOTON_BORRAR`).
+ *
+ * This task responds to presses of Button 2. Its functionality varies based on
+ * the current operational mode:
+ * - In **Clock Configuration** mode: Decrements the currently selected clock time field.
+ * - In **Alarm Configuration** mode: Decrements the currently selected alarm time field.
+ * - In **Alarm (sounding)** mode: Silences the alarm and returns to the previous mode.
+ * - In **Stopwatch** mode: Resets the stopwatch to zero if it's paused.
+ *
+ * @param args A pointer to a `clock_task_t` structure for accessing clock/alarm data and event group.
+ */
 void tarea_b2(void *args)
 {
     clock_task_t clock_p = (clock_task_t)args;
@@ -392,7 +460,19 @@ void tarea_b2(void *args)
     }
 }
 
-// void tomar_parcial(void *args)
+
+/**
+ * @brief FreeRTOS task handling Button 3 (`BOTON_PARCIAL`).
+ *
+ * This task responds to presses of Button 3. Its functionality varies based on
+ * the current operational mode:
+ * - In **Clock Configuration** mode: Increments the currently selected clock time field.
+ * - In **Alarm (sounding)** mode: Snoozes the alarm for 5 minutes.
+ * - In **Alarm Configuration** mode: Increments the currently selected alarm time field.
+ * - In **Stopwatch** mode: Records a lap (partial) time if the stopwatch is running.
+ *
+ * @param args A pointer to a `clock_task_t` structure for accessing clock/alarm data and event group.
+ */
 void tarea_b3(void *args)
 {
     clock_task_t clock_p = (clock_task_t)args;
@@ -480,7 +560,16 @@ void tarea_b3(void *args)
     }
 }
 
-/* */
+/**
+ * @brief FreeRTOS task handling Button 4 (`BOTON_MODO`) for changing operational modes.
+ *
+ * This task cycles through the main operational modes of the system:
+ * Clock -> Clock Configuration -> Alarm Configuration -> Stopwatch -> Clock.
+ * When a mode change occurs, it sets the `CAMBIO_MODO` bit in the Event Group
+ * to signal other tasks (like the display) to re-initialize for the new mode.
+ *
+ * @param args A pointer to the `EventGroupHandle_t` used for mode signaling.
+ */
 void cambia_modo(void *args)
 {
     EventGroupHandle_t _event_group = (EventGroupHandle_t)args;
@@ -550,6 +639,16 @@ void cambia_modo(void *args)
     }
 }
 
+/**
+ * @brief FreeRTOS task responsible for monitoring and triggering the alarm.
+ *
+ * This task periodically compares the current system time with the configured alarm time.
+ * If they match, and the alarm is not already active, it sets the `MODO_ALARM` bit
+ * in the Event Group, indicating that the alarm is sounding. It also saves the
+ * previous operational mode to return to it after the alarm is silenced/snoozed.
+ *
+ * @param args A pointer to a `clock_task_t` structure containing clock/alarm data and event group.
+ */
 void dispara_alarma(void *args)
 {
     clock_task_t clock_p = (clock_task_t)args;
@@ -605,6 +704,22 @@ void dispara_alarma(void *args)
     }
 }
 
+/**
+ * @brief Main entry point for the ESP-IDF application.
+ *
+ * This function initializes the FreeRTOS scheduler, creates the global Event Group,
+ * and sets up all necessary queues. It then creates and launches all the application tasks:
+ * - Four `tarea_tecla` tasks for each button.
+ * - A `tarea_led` task for LED control.
+ * - A `contar_segundos` task for the main clock.
+ * - A `dispara_alarma` task for alarm handling.
+ * - Three `tarea_bX` tasks for specific button functionalities (B1, B2, B3).
+ * - A `cambia_modo` task for mode switching.
+ * - A `contar_decima` task for the stopwatch.
+ * - A `dibujar_pantalla` task for display management.
+ *
+ * It initializes the system in `MODO_CLOCK`.
+ */
 void app_main(void)
 {
     key_task_t key_args;
