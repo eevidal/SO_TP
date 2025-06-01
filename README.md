@@ -57,4 +57,4 @@ TP Final: Se deberá agregar al cronometo del TP2 la funcionalidad de reloj desp
 ```
 
 Link video demo: 
-[https://www.youtube.com/watch?v=rwVjhiHdGc0]
+https://www.youtube.com/watch?v=rwVjhiHdGc0
