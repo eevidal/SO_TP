@@ -30,3 +30,31 @@ TP Final: Se deberá agregar al cronometo del TP2 la funcionalidad de reloj desp
 └── README.md                
 ```
 
+## Estructura de directorio del proyecto para el TP Final
+
+```
+├── CMakeLists.txt
+├── main
+│   ├── CMakeLists.txt
+│   ├── LICENSE
+│   ├── digitos.c
+│   ├── digitos.h
+│   ├── display.c
+│   ├── display.h
+│   ├── fonts.c
+│   ├── fonts.h
+│   ├── ili9341.c
+│   ├── ili9341.h
+│   ├── leds.c
+│   ├── leds.h
+│   └── main.c
+│   ├── mode_op.h
+│   ├── teclas.c
+│   ├── teclas.h
+│   ├── time_struct.c
+│   ├── time_struct.h
+└── README.md                
+```
+
+Link video demo: 
+[https://www.youtube.com/watch?v=rwVjhiHdGc0]

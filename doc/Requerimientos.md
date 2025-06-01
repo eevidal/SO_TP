@@ -11,7 +11,7 @@ Dependiendo del modo cada botón tendrá diferentes comportamientos:
 
 Boton 1
 En el modo Cronómetro: Iniciar si está detenido, Pausar si está corriendo.
-En el modo Reloj o Alarma (en configuración): Seleccionar el siguiente dígito o campo a modificar (segundos -> minutos -> horas -> día -> mes -> año) si se está configurarndo.
+En el modo Reloj o Alarma (en configuración): Seleccionar el siguiente dígito o campo a modificar (segundos -> minutos -> horas -> día -> mes -> año) si se está configurando.
 
 Boton 2
 En el modo Cronómetro (cuando está pausado): Resetear el cronómetro a cero.
