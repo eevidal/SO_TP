@@ -1,4 +1,4 @@
-# Cronómetro
+# Reloj y Cronómetro
 ## Requerimientos TP1: 
 Implementar un cronómetro utilizando más de una tarea de FreeRTOS que muestre en pantalla el valor de la cuenta actual con una resolución de décimas de segundo.
 
